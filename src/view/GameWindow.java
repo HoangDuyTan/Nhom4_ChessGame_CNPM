@@ -6,7 +6,6 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.Image;
-import java.awt.LayoutManager;
 import java.io.File;
 import javax.imageio.ImageIO;
 
@@ -20,20 +19,24 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 
 import model.Board;
+import model.King;
 import model.Piece;
 import model.Position;
-
+import javax.swing.JOptionPane;
 public class GameWindow extends JFrame {
 
     private Board board;
     private JButton[][] chessSquares = new JButton[8][8];
-
+    private Color currentTurn = Color.WHITE;
     private Color DARK_SQUARE_COLOR = Theme.DARK_SQUARE_COLOR;
     private Color LIGHT_SQUARE_COLOR = Theme.LIGHT_SQUARE_COLOR;
     private Color BORDER_COLOR = Theme.BORDER_COLOR;
     private Color CONTROL_PANEL_BG = Theme.CONTROL_PANEL_BG;
     private Color BUTTON_COLOR = Theme.BUTTON_COLOR;
-
+    private final Color SELECT_COLOR = new Color(255, 255, 100);
+    private final Color MOVE_COLOR = new Color(144, 238, 144);
+    private Position selectedPosition = null;
+    private final Color CAPTURE_COLOR = new Color(255, 100, 100);
     public GameWindow() {
         this.board = new Board();
 
@@ -56,11 +59,63 @@ public class GameWindow extends JFrame {
                 }
 
                 square.setPreferredSize(new Dimension(75, 75));
-                square.setBorderPainted(false);
                 square.setFocusPainted(false);
-
+                square.setBorder(BorderFactory.createLineBorder(new Color(0, 0, 0, 50), 1));
+                square.setBorderPainted(true);
                 chessSquares[r][c] = square;
-                boardPanel.add(square);
+                int row = r;
+                int col = c;
+                square.addActionListener(e -> {
+                    Position clicked = new Position(row, col);
+                    if (selectedPosition == null) {
+                        Piece piece = board.get(clicked);
+                        if (piece != null) {
+                            if (piece.getColor() != currentTurn) {
+                                JOptionPane.showMessageDialog(this, "Chưa tới lượt!", "Thông báo", JOptionPane.WARNING_MESSAGE);
+                                return;
+                            }
+                            selectedPosition = clicked;
+                            resetBoardColors();
+                            highlightValidMoves(clicked);
+                        }
+                    }
+                    else {
+                        Piece pieceAtClicked = board.get(clicked);
+                        if (selectedPosition.equals(clicked)) {
+                            selectedPosition = null;
+                            resetBoardColors();
+                        } else if (pieceAtClicked != null && pieceAtClicked.getColor() == currentTurn) {
+                            selectedPosition = clicked;
+                            resetBoardColors();
+                            highlightValidMoves(clicked);
+                        }
+                        else {
+                            boolean moved = board.move(selectedPosition, clicked);
+                            if (moved) {
+                                updateBoardGUI();
+                                Color opponentColor = (currentTurn == Color.WHITE) ? Color.BLACK : Color.WHITE;
+                                boolean inCheck = board.isInCheck(opponentColor);
+                                boolean canMove = board.hasValidMoves(opponentColor);
+                                if (inCheck && !canMove) {
+                                    JOptionPane.showMessageDialog(this, "CHIẾU HẾT! " + (currentTurn == Color.WHITE ? "Trắng" : "Đen") + " thắng!");
+                                } else if (!inCheck && !canMove) {
+                                    JOptionPane.showMessageDialog(this, "HÒA CỜ (Stalemate)!");
+                                } else if (inCheck) {
+                                    JOptionPane.showMessageDialog(this, "Đang bị CHIẾU!");
+                                }
+                                currentTurn = opponentColor;
+                                selectedPosition = null;
+                                resetBoardColors();
+                            } else {
+                                String msg = "Nước đi không hợp lệ!";
+                                if (board.isInCheck(currentTurn)) {
+                                    msg = "Bạn đang bị chiếu! Hãy chọn nước đi bảo vệ Vua.";
+                                }
+                                JOptionPane.showMessageDialog(this, msg, "Lỗi di chuyển", JOptionPane.ERROR_MESSAGE);
+                            }
+                        }
+                    }
+                });              boardPanel.add(square);
             }
         }
 
@@ -168,7 +223,41 @@ public class GameWindow extends JFrame {
         revalidate();
         repaint();
     }
-
+    private void resetBoardColors() {
+        for (int r = 0; r < 8; r++) {
+            for (int c = 0; c < 8; c++) {
+                if ((r + c) % 2 == 0) {
+                    chessSquares[r][c].setBackground(LIGHT_SQUARE_COLOR);
+                } else {
+                    chessSquares[r][c].setBackground(DARK_SQUARE_COLOR);
+                }
+                chessSquares[r][c].setBorder(BorderFactory.createLineBorder(new Color(0, 0, 0, 50), 1));
+            }
+        }
+    }
+    private void highlightValidMoves(Position from) {
+        Piece piece = board.get(from);
+        if (piece == null) return;
+        chessSquares[from.getR()][from.getC()].setBackground(SELECT_COLOR);
+        for (int r = 0; r < 8; r++) {
+            for (int c = 0; c < 8; c++) {
+                Position to = new Position(r, c);
+                if (piece.isValidMove(from, to, board)) {
+                    if (!board.simulateMoveAndCheck(from, to, piece.getColor())) {
+                        Piece targetPiece = board.get(to);
+                        if (targetPiece instanceof King) continue;
+                        if (targetPiece != null) {
+                            chessSquares[r][c].setBackground(CAPTURE_COLOR);
+                        } else {
+                            chessSquares[r][c].setBackground(MOVE_COLOR);
+                        }
+                        chessSquares[r][c].setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
+                        chessSquares[r][c].setBorderPainted(true);
+                    }
+                }
+            }
+        }
+    }
     public void setBoard(Board board) {
         this.board = board;
         updateBoardGUI();

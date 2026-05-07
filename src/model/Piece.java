@@ -3,7 +3,7 @@ package model;
 import java.awt.Color;
 
 public abstract class Piece {
-	private Color color;
+	protected Color color;
 	private char shortName; 
 	public Piece(Color color, char shortName){ 
 		this.color=color; 
@@ -21,5 +21,6 @@ public abstract class Piece {
 	public void setShortName(char shortName) {
 		this.shortName = shortName;
 	}
+    public abstract boolean isValidMove(Position from, Position to, Board board);
 	
 }
