@@ -1,0 +1,125 @@
+package view;
+
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Image;
+import java.io.File;
+import javax.imageio.ImageIO;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+
+public class StartWindow extends JFrame {
+    private static final Color BUTTON_COLOR = new Color(60, 130, 200);
+    private Image bgImage;
+
+    public StartWindow() {
+        setTitle("GAME CỜ VUA");
+        setSize(1000, 700);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        try {
+            File imgFile = new File("assets/img/chess.jpg");
+            if (imgFile.exists()) {
+                bgImage = ImageIO.read(imgFile);
+            } else {
+                System.err.println("Không tìm thấy file ảnh tại: " + imgFile.getAbsolutePath());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        JPanel panel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                if (bgImage != null) {
+                    g.drawImage(bgImage, 0, 0, getWidth(), getHeight(), this);
+                } else {
+                    g.setColor(new Color(30, 30, 30));
+                    g.fillRect(0, 0, getWidth(), getHeight());
+                }
+                g.setColor(new Color(0, 0, 0, 120));
+                g.fillRect(0, 0, getWidth(), getHeight());
+            }
+        };
+
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+
+        JLabel titleLabel = new JLabel("CHESS GAME");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 44));
+        titleLabel.setForeground(Color.WHITE);
+        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JButton startButton = new JButton("BẮT ĐẦU");
+        styleButton(startButton);
+        startButton.addActionListener(e -> {
+            new GameWindow();
+            dispose();
+        });
+
+        JButton guideButton = new JButton("HƯỚNG DẪN");
+        styleButton(guideButton);
+        guideButton.addActionListener(e -> {
+            JOptionPane.showMessageDialog(this,
+                    """
+                    Chào mừng bạn đến với Game Cờ Vua
+                    
+                    LUẬT CHƠI CỜ VUA CƠ BẢN
+                    - Mỗi bên có 16 quân cờ
+                    - Mục tiêu là chiếu bí vua đối thủ
+                    
+                    CÁC BƯỚC DI CHUYỂN CÁC QUÂN CỜ:
+                    - Vua (King): Di chuyển 1 ô bất kỳ.
+                    - Hậu (Queen): Đi thẳng, ngang, chéo bao nhiêu ô tùy ý.
+                    - Xe (Rook): Đi thẳng và ngang bao nhiêu ô tùy ý.
+                    - Tượng (Bishop): Đi chéo bao nhiêu ô tùy ý.
+                    - Mã (Knight): Di chuyển hình chữ L.
+                    - Tốt (Pawn): Đi thẳng 1 ô, bắt quân chéo 1 ô.
+                    
+                    CHÚC BẠN CHƠI VUI VẺ !
+                    """,
+                    "Hướng Dẫn",
+                    JOptionPane.INFORMATION_MESSAGE);
+        });
+
+        JButton exitButton = new JButton("THOÁT");
+        styleButton(exitButton);
+        exitButton.addActionListener(e -> System.exit(0));
+
+        panel.add(Box.createVerticalStrut(120));
+        panel.add(titleLabel);
+        panel.add(Box.createVerticalStrut(90));
+        panel.add(startButton);
+        panel.add(Box.createVerticalStrut(25));
+        panel.add(guideButton);
+        panel.add(Box.createVerticalStrut(25));
+        panel.add(exitButton);
+
+        add(panel);
+        setVisible(true);
+    }
+
+    private void styleButton(JButton button) {
+        button.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        button.setMaximumSize(new Dimension(260, 60));
+        button.setPreferredSize(new Dimension(260, 60));
+        button.setBackground(BUTTON_COLOR);
+        button.setForeground(Color.WHITE);
+        button.setFocusPainted(false);
+        button.setBorderPainted(false);
+        button.setOpaque(true);
+        button.setContentAreaFilled(true);
+        button.setAlignmentX(Component.CENTER_ALIGNMENT);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+    }
+}
