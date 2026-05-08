@@ -7,16 +7,23 @@ import view.GameWindow;
 
 import javax.swing.JOptionPane;
 import java.awt.Color;
+import javax.swing.Timer;
 
 public class GameController {
     private Board board;
     private GameWindow view;
     private Color currentTurn = Color.WHITE;
     private Position selectedPosition = null;
+    private Timer gameTimer;
+    private int secondsElapsed = 0;
+    private boolean isPaused = false;
+    private boolean gameEnded = false;
 
     public GameController(Board board, GameWindow view) {
         this.board = board;
         this.view = view;
+
+        startTimer();
     }
 
     public void handleSquareClick(int row, int col) {
@@ -85,6 +92,80 @@ public class GameController {
         }
     }
 
+    private void startTimer() {
+        gameTimer = new Timer(1000, e -> {
+            secondsElapsed++;
+            view.updateTimer(secondsElapsed);
+        });
+
+        gameTimer.start();
+    }
+
+    public void togglePause() {
+        isPaused = !isPaused;
+
+        if (isPaused) {
+            gameTimer.stop();
+
+            selectedPosition = null;
+            view.resetBoardColors();
+
+        } else {
+            gameTimer.start();
+        }
+
+        view.updatePauseButton(isPaused);
+    }
+
+    public void handleSquareClick(int row, int col) {
+
+        if (isPaused || gameEnded) {
+            return;
+        }
+
+        Position clicked = new Position(row, col);
+
+        if (selectedPosition == null) {
+            handleSelection(clicked);
+        } else {
+            handleMoveOrReSelection(clicked);
+        }
+    }
+
+    public void resignGame() {
+
+        if (gameEnded) {
+            return;
+        }
+
+        String loser =
+                (currentTurn == Color.WHITE)
+                        ? "Trắng"
+                        : "Đen";
+
+        String winner =
+                (currentTurn == Color.WHITE)
+                        ? "Đen"
+                        : "Trắng";
+
+        int choice = JOptionPane.showConfirmDialog(
+                view,
+                loser + " muốn đầu hàng?",
+                "Xác nhận đầu hàng",
+                JOptionPane.YES_NO_OPTION
+        );
+
+        if (choice == JOptionPane.YES_OPTION) {
+
+            gameEnded = true;
+
+            gameTimer.stop();
+
+            JOptionPane.showMessageDialog(
+                    view,
+                    winner + " thắng do đối thủ đầu hàng!"
+            );
+        }
     public void setCurrentTurn(Color turn) {
         this.currentTurn = turn;
     }
