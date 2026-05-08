@@ -248,6 +248,7 @@ public class GameWindow extends JFrame {
         } else {
             pauseButton.setText("Tạm Dừng");
         }
+    }
     public GameController getController() {
         return controller;
     }

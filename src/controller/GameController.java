@@ -4,6 +4,7 @@ import model.Board;
 import model.Piece;
 import model.Position;
 import view.GameWindow;
+import view.SaveManager;
 
 import javax.swing.JOptionPane;
 import java.awt.Color;
@@ -24,15 +25,6 @@ public class GameController {
         this.view = view;
 
         startTimer();
-    }
-
-    public void handleSquareClick(int row, int col) {
-        Position clicked = new Position(row, col);
-        if (selectedPosition == null) {
-            handleSelection(clicked);
-        } else {
-            handleMoveOrReSelection(clicked);
-        }
     }
 
     private void handleSelection(Position clicked) {
@@ -68,7 +60,7 @@ public class GameController {
             view.updateBoardGUI();
             checkGameState();
             currentTurn = (currentTurn == Color.WHITE) ? Color.BLACK : Color.WHITE;
-            SaveLoadController.autoSave(currentTurn, board);
+            SaveLoadController.autoSave(currentTurn, board, secondsElapsed);
             selectedPosition = null;
             view.resetBoardColors();
         } else {
@@ -161,12 +153,25 @@ public class GameController {
 
             gameTimer.stop();
 
+            SaveManager.deleteSaveFile();
+
             JOptionPane.showMessageDialog(
                     view,
                     winner + " thắng do đối thủ đầu hàng!"
             );
         }
+    }
+
     public void setCurrentTurn(Color turn) {
         this.currentTurn = turn;
+    }
+
+    public int getSecondsElapsed() {
+        return secondsElapsed;
+    }
+
+    public void setSecondsElapsed(int secondsElapsed) {
+        this.secondsElapsed = secondsElapsed;
+        view.updateTimer(secondsElapsed);
     }
 }
