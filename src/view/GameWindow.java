@@ -18,13 +18,13 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 
+import controller.GameController;
 import model.Board;
 import model.King;
 import model.Piece;
 import model.Position;
 import javax.swing.JOptionPane;
 public class GameWindow extends JFrame {
-
     private Board board;
     private JButton[][] chessSquares = new JButton[8][8];
     private Color currentTurn = Color.WHITE;
@@ -35,11 +35,11 @@ public class GameWindow extends JFrame {
     private Color BUTTON_COLOR = Theme.BUTTON_COLOR;
     private final Color SELECT_COLOR = new Color(255, 255, 100);
     private final Color MOVE_COLOR = new Color(144, 238, 144);
-    private Position selectedPosition = null;
     private final Color CAPTURE_COLOR = new Color(255, 100, 100);
+    private GameController controller;
     public GameWindow() {
         this.board = new Board();
-
+        this.controller = new GameController(this.board, this);
         setTitle("CỜ VUA");
         setSize(1000, 700);
         setMinimumSize(new Dimension(850, 650));
@@ -66,56 +66,8 @@ public class GameWindow extends JFrame {
                 int row = r;
                 int col = c;
                 square.addActionListener(e -> {
-                    Position clicked = new Position(row, col);
-                    if (selectedPosition == null) {
-                        Piece piece = board.get(clicked);
-                        if (piece != null) {
-                            if (piece.getColor() != currentTurn) {
-                                JOptionPane.showMessageDialog(this, "Chưa tới lượt!", "Thông báo", JOptionPane.WARNING_MESSAGE);
-                                return;
-                            }
-                            selectedPosition = clicked;
-                            resetBoardColors();
-                            highlightValidMoves(clicked);
-                        }
-                    }
-                    else {
-                        Piece pieceAtClicked = board.get(clicked);
-                        if (selectedPosition.equals(clicked)) {
-                            selectedPosition = null;
-                            resetBoardColors();
-                        } else if (pieceAtClicked != null && pieceAtClicked.getColor() == currentTurn) {
-                            selectedPosition = clicked;
-                            resetBoardColors();
-                            highlightValidMoves(clicked);
-                        }
-                        else {
-                            boolean moved = board.move(selectedPosition, clicked);
-                            if (moved) {
-                                updateBoardGUI();
-                                Color opponentColor = (currentTurn == Color.WHITE) ? Color.BLACK : Color.WHITE;
-                                boolean inCheck = board.isInCheck(opponentColor);
-                                boolean canMove = board.hasValidMoves(opponentColor);
-                                if (inCheck && !canMove) {
-                                    JOptionPane.showMessageDialog(this, "CHIẾU HẾT! " + (currentTurn == Color.WHITE ? "Trắng" : "Đen") + " thắng!");
-                                } else if (!inCheck && !canMove) {
-                                    JOptionPane.showMessageDialog(this, "HÒA CỜ (Stalemate)!");
-                                } else if (inCheck) {
-                                    JOptionPane.showMessageDialog(this, "Đang bị CHIẾU!");
-                                }
-                                currentTurn = opponentColor;
-                                selectedPosition = null;
-                                resetBoardColors();
-                            } else {
-                                String msg = "Nước đi không hợp lệ!";
-                                if (board.isInCheck(currentTurn)) {
-                                    msg = "Bạn đang bị chiếu! Hãy chọn nước đi bảo vệ Vua.";
-                                }
-                                JOptionPane.showMessageDialog(this, msg, "Lỗi di chuyển", JOptionPane.ERROR_MESSAGE);
-                            }
-                        }
-                    }
-                });              boardPanel.add(square);
+                    controller.handleSquareClick(row, col);
+                });            boardPanel.add(square);
             }
         }
 
@@ -223,7 +175,7 @@ public class GameWindow extends JFrame {
         revalidate();
         repaint();
     }
-    private void resetBoardColors() {
+    public void resetBoardColors() {
         for (int r = 0; r < 8; r++) {
             for (int c = 0; c < 8; c++) {
                 if ((r + c) % 2 == 0) {
@@ -235,7 +187,7 @@ public class GameWindow extends JFrame {
             }
         }
     }
-    private void highlightValidMoves(Position from) {
+    public void highlightValidMoves(Position from, Board board) {
         Piece piece = board.get(from);
         if (piece == null) return;
         chessSquares[from.getR()][from.getC()].setBackground(SELECT_COLOR);
@@ -252,7 +204,6 @@ public class GameWindow extends JFrame {
                             chessSquares[r][c].setBackground(MOVE_COLOR);
                         }
                         chessSquares[r][c].setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
-                        chessSquares[r][c].setBorderPainted(true);
                     }
                 }
             }
