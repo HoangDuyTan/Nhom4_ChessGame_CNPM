@@ -4,6 +4,7 @@ import model.Board;
 import model.Piece;
 import model.Position;
 import view.GameWindow;
+
 import javax.swing.JOptionPane;
 import java.awt.Color;
 
@@ -12,10 +13,12 @@ public class GameController {
     private GameWindow view;
     private Color currentTurn = Color.WHITE;
     private Position selectedPosition = null;
+
     public GameController(Board board, GameWindow view) {
         this.board = board;
         this.view = view;
     }
+
     public void handleSquareClick(int row, int col) {
         Position clicked = new Position(row, col);
         if (selectedPosition == null) {
@@ -24,6 +27,7 @@ public class GameController {
             handleMoveOrReSelection(clicked);
         }
     }
+
     private void handleSelection(Position clicked) {
         Piece piece = board.get(clicked);
         if (piece != null) {
@@ -36,27 +40,28 @@ public class GameController {
             view.highlightValidMoves(clicked, board);
         }
     }
+
     private void handleMoveOrReSelection(Position clicked) {
         Piece pieceAtClicked = board.get(clicked);
         if (selectedPosition.equals(clicked)) {
             selectedPosition = null;
             view.resetBoardColors();
-        }
-        else if (pieceAtClicked != null && pieceAtClicked.getColor() == currentTurn) {
+        } else if (pieceAtClicked != null && pieceAtClicked.getColor() == currentTurn) {
             selectedPosition = clicked;
             view.resetBoardColors();
             view.highlightValidMoves(clicked, board);
-        }
-        else {
+        } else {
             processMove(clicked);
         }
     }
+
     private void processMove(Position destination) {
         boolean moved = board.move(selectedPosition, destination);
         if (moved) {
             view.updateBoardGUI();
             checkGameState();
             currentTurn = (currentTurn == Color.WHITE) ? Color.BLACK : Color.WHITE;
+            SaveLoadController.autoSave(currentTurn, board);
             selectedPosition = null;
             view.resetBoardColors();
         } else {
@@ -66,6 +71,7 @@ public class GameController {
             JOptionPane.showMessageDialog(view, msg, "Lỗi di chuyển", JOptionPane.ERROR_MESSAGE);
         }
     }
+
     private void checkGameState() {
         Color opponentColor = (currentTurn == Color.WHITE) ? Color.BLACK : Color.WHITE;
         boolean inCheck = board.isInCheck(opponentColor);
@@ -77,5 +83,9 @@ public class GameController {
         } else if (inCheck) {
             JOptionPane.showMessageDialog(view, "Đang bị CHIẾU!");
         }
+    }
+
+    public void setCurrentTurn(Color turn) {
+        this.currentTurn = turn;
     }
 }

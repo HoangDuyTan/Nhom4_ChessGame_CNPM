@@ -1,22 +1,13 @@
 package view;
 
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.Cursor;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.Graphics;
-import java.awt.Image;
-import java.io.File;
+import controller.GameController;
+import controller.SaveLoadController;
+import model.Board;
+
 import javax.imageio.ImageIO;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.ImageIcon;
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
+import javax.swing.*;
+import java.awt.*;
+import java.io.File;
 
 public class StartWindow extends JFrame {
     private static final Color BUTTON_COLOR = new Color(60, 130, 200);
@@ -63,8 +54,25 @@ public class StartWindow extends JFrame {
         JButton startButton = new JButton("BẮT ĐẦU");
         styleButton(startButton);
         startButton.addActionListener(e -> {
-            new GameWindow();
-            dispose();
+            if (SaveManager.hasSaveFile()) {
+                Object[] options = {"Tiếp tục ván cũ", "Tạo ván mới", "Hủy"};
+                int n = JOptionPane.showOptionDialog(this,
+                        "Bạn có một ván chơi chưa hoàn thành. Bạn muốn tiếp tục không?",
+                        "Thông báo bản lưu",
+                        JOptionPane.YES_NO_CANCEL_OPTION,
+                        JOptionPane.QUESTION_MESSAGE,
+                        null, options, options[0]);
+
+                if (n == JOptionPane.YES_OPTION) {
+                    runGame(true);
+                } else if (n == JOptionPane.NO_OPTION) {
+                    SaveManager.deleteSaveFile();
+                    runGame(false);
+                }
+            } else {
+                new GameWindow();
+                dispose();
+            }
         });
 
         JButton guideButton = new JButton("HƯỚNG DẪN");
@@ -72,22 +80,22 @@ public class StartWindow extends JFrame {
         guideButton.addActionListener(e -> {
             JOptionPane.showMessageDialog(this,
                     """
-                    Chào mừng bạn đến với Game Cờ Vua
-                    
-                    LUẬT CHƠI CỜ VUA CƠ BẢN
-                    - Mỗi bên có 16 quân cờ
-                    - Mục tiêu là chiếu bí vua đối thủ
-                    
-                    CÁC BƯỚC DI CHUYỂN CÁC QUÂN CỜ:
-                    - Vua (King): Di chuyển 1 ô bất kỳ.
-                    - Hậu (Queen): Đi thẳng, ngang, chéo bao nhiêu ô tùy ý.
-                    - Xe (Rook): Đi thẳng và ngang bao nhiêu ô tùy ý.
-                    - Tượng (Bishop): Đi chéo bao nhiêu ô tùy ý.
-                    - Mã (Knight): Di chuyển hình chữ L.
-                    - Tốt (Pawn): Đi thẳng 1 ô, bắt quân chéo 1 ô.
-                    
-                    CHÚC BẠN CHƠI VUI VẺ !
-                    """,
+                            Chào mừng bạn đến với Game Cờ Vua
+                            
+                            LUẬT CHƠI CỜ VUA CƠ BẢN
+                            - Mỗi bên có 16 quân cờ
+                            - Mục tiêu là chiếu bí vua đối thủ
+                            
+                            CÁC BƯỚC DI CHUYỂN CÁC QUÂN CỜ:
+                            - Vua (King): Di chuyển 1 ô bất kỳ.
+                            - Hậu (Queen): Đi thẳng, ngang, chéo bao nhiêu ô tùy ý.
+                            - Xe (Rook): Đi thẳng và ngang bao nhiêu ô tùy ý.
+                            - Tượng (Bishop): Đi chéo bao nhiêu ô tùy ý.
+                            - Mã (Knight): Di chuyển hình chữ L.
+                            - Tốt (Pawn): Đi thẳng 1 ô, bắt quân chéo 1 ô.
+                            
+                            CHÚC BẠN CHƠI VUI VẺ !
+                            """,
                     "Hướng Dẫn",
                     JOptionPane.INFORMATION_MESSAGE);
         });
@@ -121,5 +129,18 @@ public class StartWindow extends JFrame {
         button.setContentAreaFilled(true);
         button.setAlignmentX(Component.CENTER_ALIGNMENT);
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+    }
+
+    private void runGame(boolean isResume) {
+        this.dispose();
+        GameWindow gameWindow = new GameWindow();
+
+        if (isResume) {
+            Board currentBoard = gameWindow.getBoard();
+            GameController controller = gameWindow.getController();
+            SaveLoadController.loadGame(currentBoard, controller);
+            gameWindow.updateBoardGUI();
+        }
+        gameWindow.setVisible(true);
     }
 }

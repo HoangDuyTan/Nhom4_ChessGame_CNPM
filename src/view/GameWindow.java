@@ -1,29 +1,16 @@
 package view;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.GridLayout;
-import java.awt.Image;
-import java.io.File;
-import javax.imageio.ImageIO;
-
-import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.ImageIcon;
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-
 import controller.GameController;
 import model.Board;
 import model.King;
 import model.Piece;
 import model.Position;
-import javax.swing.JOptionPane;
+
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import java.awt.*;
+import java.io.File;
+
 public class GameWindow extends JFrame {
     private Board board;
     private JButton[][] chessSquares = new JButton[8][8];
@@ -37,6 +24,7 @@ public class GameWindow extends JFrame {
     private final Color MOVE_COLOR = new Color(144, 238, 144);
     private final Color CAPTURE_COLOR = new Color(255, 100, 100);
     private GameController controller;
+
     public GameWindow() {
         this.board = new Board();
         this.controller = new GameController(this.board, this);
@@ -67,7 +55,8 @@ public class GameWindow extends JFrame {
                 int col = c;
                 square.addActionListener(e -> {
                     controller.handleSquareClick(row, col);
-                });            boardPanel.add(square);
+                });
+                boardPanel.add(square);
             }
         }
 
@@ -175,6 +164,7 @@ public class GameWindow extends JFrame {
         revalidate();
         repaint();
     }
+
     public void resetBoardColors() {
         for (int r = 0; r < 8; r++) {
             for (int c = 0; c < 8; c++) {
@@ -187,6 +177,7 @@ public class GameWindow extends JFrame {
             }
         }
     }
+
     public void highlightValidMoves(Position from, Board board) {
         Piece piece = board.get(from);
         if (piece == null) return;
@@ -209,8 +200,17 @@ public class GameWindow extends JFrame {
             }
         }
     }
+
+    public Board getBoard() {
+        return board;
+    }
+
     public void setBoard(Board board) {
         this.board = board;
         updateBoardGUI();
+    }
+
+    public GameController getController() {
+        return controller;
     }
 }
