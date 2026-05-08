@@ -23,7 +23,9 @@ import model.Board;
 import model.King;
 import model.Piece;
 import model.Position;
+
 import javax.swing.JOptionPane;
+
 public class GameWindow extends JFrame {
     private Board board;
     private JButton[][] chessSquares = new JButton[8][8];
@@ -37,6 +39,9 @@ public class GameWindow extends JFrame {
     private final Color MOVE_COLOR = new Color(144, 238, 144);
     private final Color CAPTURE_COLOR = new Color(255, 100, 100);
     private GameController controller;
+    private JLabel timerLabel;
+    private JButton pauseButton;
+
     public GameWindow() {
         this.board = new Board();
         this.controller = new GameController(this.board, this);
@@ -67,7 +72,8 @@ public class GameWindow extends JFrame {
                 int col = c;
                 square.addActionListener(e -> {
                     controller.handleSquareClick(row, col);
-                });            boardPanel.add(square);
+                });
+                boardPanel.add(square);
             }
         }
 
@@ -114,7 +120,7 @@ public class GameWindow extends JFrame {
         rightPanel.add(titleLabel);
         rightPanel.add(Box.createVerticalStrut(30));
 
-        String[] buttonNames = {"Quay Lại Menu", "Chơi Game Mới", "Cài Đặt"};
+        String[] buttonNames = {"Quay Lại Menu", "Tạm Dừng", "Đầu Hàng", "Chơi Game Mới", "Cài Đặt"};
         for (String name : buttonNames) {
             JButton btn = new JButton(name);
             btn.setFont(new Font("Arial", Font.PLAIN, 16));
@@ -129,6 +135,18 @@ public class GameWindow extends JFrame {
                     new StartWindow();
                     dispose();
                 });
+            } else if (name.equals("Tạm Dừng")) {
+
+                pauseButton = btn;
+
+                btn.addActionListener(e -> {
+                    controller.togglePause();
+                });
+            } else if (name.equals("Đầu Hàng")) {
+
+                btn.addActionListener(e -> {
+                    controller.resignGame();
+                });
             } else if (name.equals("Cài Đặt")) {
                 btn.addActionListener(e -> new SettingWindow(this));
             }
@@ -136,6 +154,12 @@ public class GameWindow extends JFrame {
             rightPanel.add(btn);
             rightPanel.add(Box.createVerticalStrut(15));
         }
+        timerLabel = new JLabel("Time: 00:00");
+        timerLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        timerLabel.setAlignmentX(CENTER_ALIGNMENT);
+
+        rightPanel.add(timerLabel);
+        rightPanel.add(Box.createVerticalStrut(20));
 
         add(rightPanel, BorderLayout.EAST);
         updateBoardGUI();
@@ -175,6 +199,7 @@ public class GameWindow extends JFrame {
         revalidate();
         repaint();
     }
+
     public void resetBoardColors() {
         for (int r = 0; r < 8; r++) {
             for (int c = 0; c < 8; c++) {
@@ -187,6 +212,7 @@ public class GameWindow extends JFrame {
             }
         }
     }
+
     public void highlightValidMoves(Position from, Board board) {
         Piece piece = board.get(from);
         if (piece == null) return;
@@ -209,8 +235,28 @@ public class GameWindow extends JFrame {
             }
         }
     }
+
     public void setBoard(Board board) {
         this.board = board;
         updateBoardGUI();
+    }
+
+    public void updateTimer(int seconds) {
+
+        int minutes = seconds / 60;
+        int remainSeconds = seconds % 60;
+
+        timerLabel.setText(String.format("Time: %02d:%02d",
+                minutes,
+                remainSeconds));
+    }
+
+    public void updatePauseButton(boolean paused) {
+
+        if (paused) {
+            pauseButton.setText("Tiếp Tục");
+        } else {
+            pauseButton.setText("Tạm Dừng");
+        }
     }
 }
