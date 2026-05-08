@@ -4,9 +4,11 @@ import java.awt.Color;
 
 public class Board {
     private Piece[][] grid = new Piece[8][8];
+
     public Board() {
         init();
     }
+
     public Piece get(Position pos) {
         return grid[pos.getR()][pos.getC()];
     }
@@ -17,6 +19,7 @@ public class Board {
             grid[pos.getR()][pos.getC()] = piece;
         }
     }
+
     public void init() {
         grid[0][0] = new Rook(Color.WHITE);
         grid[0][1] = new Knight(Color.WHITE);
@@ -43,6 +46,7 @@ public class Board {
             grid[6][c] = new Pawn(Color.BLACK);
         }
     }
+
     public boolean move(Position from, Position to) {
         Piece piece = get(from);
         if (piece == null || !piece.getColor().equals(piece.getColor())) return false;
@@ -54,6 +58,7 @@ public class Board {
         grid[from.getR()][from.getC()] = null;
         return true;
     }
+
     public Position findKing(Color color) {
         for (int r = 0; r < 8; r++) {
             for (int c = 0; c < 8; c++) {
@@ -65,6 +70,7 @@ public class Board {
         }
         return null;
     }
+
     public boolean isInCheck(Color color) {
         Position kingPos = findKing(color);
         if (kingPos == null) return false;
@@ -80,6 +86,7 @@ public class Board {
         }
         return false;
     }
+
     public boolean simulateMoveAndCheck(Position from, Position to, Color color) {
         Piece originalFrom = grid[from.getR()][from.getC()];
         Piece originalTo = grid[to.getR()][to.getC()];
@@ -90,6 +97,7 @@ public class Board {
         grid[to.getR()][to.getC()] = originalTo;
         return check;
     }
+
     public boolean hasValidMoves(Color color) {
         for (int r1 = 0; r1 < 8; r1++) {
             for (int c1 = 0; c1 < 8; c1++) {
@@ -108,5 +116,50 @@ public class Board {
             }
         }
         return false;
+    }
+
+    // Load game
+    public void loadGame(String[] rows) {
+        for (int r = 0; r < 8; r++) {
+            for (int c = 0; c < 8; c++) {
+                grid[r][c] = null;
+            }
+        }
+
+        for (int r = 0; r < 8; r++) {
+            String row = rows[r];
+            for (int c = 0; c < 8; c++) {
+                char symbol = row.charAt(c);
+                if (symbol == '-') {
+                    continue;
+                }
+
+                Color color = Character.isUpperCase(symbol) ? Color.WHITE : Color.BLACK;
+                char lowerSymbol = Character.toLowerCase(symbol);
+
+                Piece piece = null;
+                switch (lowerSymbol) {
+                    case 'k':
+                        piece = new King(color);
+                        break;
+                    case 'q':
+                        piece = new Queen(color);
+                        break;
+                    case 'r':
+                        piece = new Rook(color);
+                        break;
+                    case 'b':
+                        piece = new Bishop(color);
+                        break;
+                    case 'n':
+                        piece = new Knight(color);
+                        break;
+                    case 'p':
+                        piece = new Pawn(color);
+                        break;
+                }
+                grid[r][c] = piece;
+            }
+        }
     }
 }

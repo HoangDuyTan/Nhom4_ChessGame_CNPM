@@ -26,6 +26,15 @@ public class GameController {
         startTimer();
     }
 
+    public void handleSquareClick(int row, int col) {
+        Position clicked = new Position(row, col);
+        if (selectedPosition == null) {
+            handleSelection(clicked);
+        } else {
+            handleMoveOrReSelection(clicked);
+        }
+    }
+
     private void handleSelection(Position clicked) {
         Piece piece = board.get(clicked);
         if (piece != null) {
@@ -59,6 +68,7 @@ public class GameController {
             view.updateBoardGUI();
             checkGameState();
             currentTurn = (currentTurn == Color.WHITE) ? Color.BLACK : Color.WHITE;
+            SaveLoadController.autoSave(currentTurn, board);
             selectedPosition = null;
             view.resetBoardColors();
         } else {
@@ -156,5 +166,7 @@ public class GameController {
                     winner + " thắng do đối thủ đầu hàng!"
             );
         }
+    public void setCurrentTurn(Color turn) {
+        this.currentTurn = turn;
     }
 }

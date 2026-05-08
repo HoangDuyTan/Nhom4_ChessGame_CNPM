@@ -1,23 +1,5 @@
 package view;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.GridLayout;
-import java.awt.Image;
-import java.io.File;
-import javax.imageio.ImageIO;
-
-import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.ImageIcon;
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-
 import controller.GameController;
 import model.Board;
 import model.King;
@@ -25,6 +7,10 @@ import model.Piece;
 import model.Position;
 
 import javax.swing.JOptionPane;
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import java.awt.*;
+import java.io.File;
 
 public class GameWindow extends JFrame {
     private Board board;
@@ -236,6 +222,10 @@ public class GameWindow extends JFrame {
         }
     }
 
+    public Board getBoard() {
+        return board;
+    }
+
     public void setBoard(Board board) {
         this.board = board;
         updateBoardGUI();
@@ -258,5 +248,7 @@ public class GameWindow extends JFrame {
         } else {
             pauseButton.setText("Tạm Dừng");
         }
+    public GameController getController() {
+        return controller;
     }
 }
