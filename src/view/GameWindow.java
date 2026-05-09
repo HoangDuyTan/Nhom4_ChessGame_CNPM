@@ -106,7 +106,7 @@ public class GameWindow extends JFrame {
         rightPanel.add(titleLabel);
         rightPanel.add(Box.createVerticalStrut(30));
 
-        String[] buttonNames = {"Quay Lại Menu", "Tạm Dừng", "Đầu Hàng", "Chơi Game Mới", "Cài Đặt"};
+        String[] buttonNames = {"Quay Lại Menu", "Đi Lại", "Đi Tiếp", "Tạm Dừng", "Đầu Hàng", "Chơi Game Mới", "Cài Đặt"};
         for (String name : buttonNames) {
             JButton btn = new JButton(name);
             btn.setFont(new Font("Arial", Font.PLAIN, 16));
@@ -121,6 +121,10 @@ public class GameWindow extends JFrame {
                     new StartWindow();
                     dispose();
                 });
+            } else if (name.equals("Đi Lại")) {
+                btn.addActionListener(e -> controller.undo());
+            } else if (name.equals("Đi Tiếp")) {
+                btn.addActionListener(e -> controller.redo());
             } else if (name.equals("Tạm Dừng")) {
 
                 pauseButton = btn;
