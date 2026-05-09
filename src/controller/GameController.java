@@ -1,6 +1,7 @@
 package controller;
 
 import model.Board;
+import model.GameState;
 import model.Piece;
 import model.Position;
 import view.GameWindow;
@@ -8,6 +9,7 @@ import view.SaveManager;
 
 import javax.swing.JOptionPane;
 import java.awt.Color;
+import java.util.Stack;
 import javax.swing.Timer;
 
 public class GameController {
@@ -19,6 +21,8 @@ public class GameController {
     private int secondsElapsed = 0;
     private boolean isPaused = false;
     private boolean gameEnded = false;
+    private Stack<GameState> undoStack = new Stack<>();
+    private Stack<GameState> redoStack = new Stack<>();
 
     public GameController(Board board, GameWindow view) {
         this.board = board;
@@ -55,8 +59,11 @@ public class GameController {
     }
 
     private void processMove(Position destination) {
+        GameState stateBefore = new GameState(board, currentTurn);
         boolean moved = board.move(selectedPosition, destination);
         if (moved) {
+            undoStack.push(stateBefore);
+            redoStack.clear();
             view.updateBoardGUI();
             checkGameState();
             currentTurn = (currentTurn == Color.WHITE) ? Color.BLACK : Color.WHITE;
@@ -173,5 +180,35 @@ public class GameController {
     public void setSecondsElapsed(int secondsElapsed) {
         this.secondsElapsed = secondsElapsed;
         view.updateTimer(secondsElapsed);
+    }
+
+    public void undo() {
+        if (isPaused || gameEnded || undoStack.isEmpty()) return;
+        GameState currentState = new GameState(board, currentTurn);
+        redoStack.push(currentState);
+        
+        GameState previousState = undoStack.pop();
+        previousState.restore(board);
+        this.currentTurn = previousState.getTurn();
+        
+        view.updateBoardGUI();
+        selectedPosition = null;
+        view.resetBoardColors();
+        SaveLoadController.autoSave(currentTurn, board, secondsElapsed);
+    }
+
+    public void redo() {
+        if (isPaused || gameEnded || redoStack.isEmpty()) return;
+        GameState currentState = new GameState(board, currentTurn);
+        undoStack.push(currentState);
+
+        GameState nextState = redoStack.pop();
+        nextState.restore(board);
+        this.currentTurn = nextState.getTurn();
+
+        view.updateBoardGUI();
+        selectedPosition = null;
+        view.resetBoardColors();
+        SaveLoadController.autoSave(currentTurn, board, secondsElapsed);
     }
 }
