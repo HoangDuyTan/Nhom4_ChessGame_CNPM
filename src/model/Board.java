@@ -118,7 +118,10 @@ public class Board {
         return false;
     }
 
-    // Load game
+    /* * MÃ USE CASE: UC-04.2.3 (Khởi tạo lại bàn cờ)
+     * Chức năng: Duyệt qua mảng chuỗi 8 dòng, phân tích từng ký tự (K, Q, R...)
+     * và phân biệt chữ hoa/thường để khởi tạo lại chính xác các đối tượng Piece (King, Queen, Rook...).
+     */
     public void loadGame(String[] rows) {
         for (int r = 0; r < 8; r++) {
             for (int c = 0; c < 8; c++) {

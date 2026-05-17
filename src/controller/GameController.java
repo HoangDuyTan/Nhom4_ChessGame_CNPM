@@ -67,6 +67,10 @@ public class GameController {
             view.updateBoardGUI();
             checkGameState();
             currentTurn = (currentTurn == Color.WHITE) ? Color.BLACK : Color.WHITE;
+
+            /* * [TRIGGER AUTO-SAVE]: Kích hoạt UC-04.1 (Tự động lưu ván đấu)
+             * Chức năng: Đảm bảo tính bền vững dữ liệu ngay sau khi một nước đi hợp lệ được thực hiện xong.
+             */
             SaveLoadController.autoSave(currentTurn, board, secondsElapsed);
             selectedPosition = null;
             view.resetBoardColors();

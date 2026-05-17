@@ -136,6 +136,9 @@ public class StartWindow extends JFrame {
         GameWindow gameWindow = new GameWindow();
 
         if (isResume) {
+            /* * [TRIGGER LOAD-GAME]: Kích hoạt Use Case gốc UC-04.2 (Tải ván đấu cũ)
+             * Điều kiện: Người chơi chọn "Tiếp tục ván cũ" trên UI và có file save hợp lệ.
+             */
             Board currentBoard = gameWindow.getBoard();
             GameController controller = gameWindow.getController();
             SaveLoadController.loadGame(currentBoard, controller);
