@@ -138,6 +138,9 @@ public class GameController {
     private void handleTimeOut(Color loser) {
         gameEnded = true;
         gameTimer.stop();
+
+        SaveManager.deleteSaveFile();
+
         String winner = (loser == Color.WHITE) ? "Quân Đen" : "Quân Trắng";
         JOptionPane.showMessageDialog(view, "Hết giờ! " + winner + " giành chiến thắng.",
                 "Kết thúc ván đấu", JOptionPane.INFORMATION_MESSAGE);
