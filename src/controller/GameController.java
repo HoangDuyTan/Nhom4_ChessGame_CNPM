@@ -322,6 +322,10 @@ public class GameController {
         GameState previousState = undoStack.pop();
         previousState.restore(board);
         this.currentTurn = previousState.getTurn();
+        this.whiteTimeLeft = previousState.getWhiteTimeLeft();
+        this.blackTimeLeft = previousState.getBlackTimeLeft();
+        this.secondsElapsed = (whiteTimeLeft << 16) | (blackTimeLeft & 0xFFFF);
+        view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
 
         view.updateBoardGUI();
         selectedPosition = null;
@@ -337,7 +341,10 @@ public class GameController {
         GameState nextState = redoStack.pop();
         nextState.restore(board);
         this.currentTurn = nextState.getTurn();
-
+        this.whiteTimeLeft = nextState.getWhiteTimeLeft();
+        this.blackTimeLeft = nextState.getBlackTimeLeft();
+        this.secondsElapsed = (whiteTimeLeft << 16) | (blackTimeLeft & 0xFFFF);
+        view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
         view.updateBoardGUI();
         selectedPosition = null;
         view.resetBoardColors();
