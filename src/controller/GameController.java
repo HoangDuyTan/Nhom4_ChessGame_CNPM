@@ -343,4 +343,28 @@ public class GameController {
         view.resetBoardColors();
         SaveLoadController.autoSave(currentTurn, board, secondsElapsed);
     }
+    public void restartGame() {
+        this.board.reset();
+
+        this.currentTurn = Color.WHITE;
+        this.selectedPosition = null;
+        this.gameEnded = false;
+        this.isPaused = false;
+
+        if (gameTimer != null) {
+            gameTimer.stop();
+        }
+        this.whiteTimeLeft = BASE_TIME;
+        this.blackTimeLeft = BASE_TIME;
+
+        startTimer();
+
+        undoStack.clear();
+        redoStack.clear();
+
+        view.resetBoardColors();
+        view.updateBoardGUI();
+        view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
+        view.updatePauseButton(false);
+    }
 }
