@@ -150,6 +150,19 @@ public class GameWindow extends JFrame {
                 btn.addActionListener(e -> controller.undo());
             } else if (name.equals("Đi Tiếp")) {
                 btn.addActionListener(e -> controller.redo());
+            } else if (name.equals("Chơi Game Mới")) {
+                btn.addActionListener(e -> {
+                    int choice = JOptionPane.showConfirmDialog(
+                            this,
+                            "Bạn có chắc muốn chơi ván mới?",
+                            "Xác nhận",
+                            JOptionPane.YES_NO_OPTION
+                    );
+
+                    if (choice == JOptionPane.YES_OPTION) {
+                        controller.restartGame();
+                    }
+                });
             } else if (name.equals("Tạm Dừng")) {
 
                 pauseButton = btn;
