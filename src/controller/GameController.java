@@ -36,7 +36,11 @@ public class GameController {
 
         startTimer();
     }
-
+    /**
+     * CHỨC NĂNG: UC-02.1: Select Piece (Chọn quân cờ)
+     * Mô tả: Người chơi chọn một quân cờ của phe mình. Hệ thống kiểm tra lượt đi
+     * và ghi nhận quân cờ hợp lệ để chuẩn bị cho bước di chuyển tiếp theo.
+     */
     private void handleSelection(Position clicked) {
         Piece piece = board.get(clicked);
         if (piece != null) {
@@ -46,10 +50,17 @@ public class GameController {
             }
             selectedPosition = clicked;
             view.resetBoardColors();
+            /**
+             * CHỨC NĂNG: UC-02.3: Check Available Move (Kiểm tra nước đi có sẵn)
+             * Mô tả: Hệ thống tự động tính toán luật đi của quân cờ để highlight các ô đích khả dụng.
+             */
             view.highlightValidMoves(clicked, board);
         }
     }
-
+    /**
+     * CHỨC NĂNG: Điều phối hành động nhấp chuột khi đã có quân cờ được chọn trước đó
+     * Mô tả: Phân tách hành vi người chơi dựa trên ô click tiếp theo (Hủy chọn / Đổi quân / Đi quân).
+     */
     private void handleMoveOrReSelection(Position clicked) {
         Piece pieceAtClicked = board.get(clicked);
         if (selectedPosition.equals(clicked)) {
@@ -63,7 +74,10 @@ public class GameController {
             processMove(clicked);
         }
     }
-
+    /**
+     * CHỨC NĂNG: UC-02.2: Select Destination (Chọn ô đích) & Xử lý di chuyển quân
+     * Mô tả: Hạ quân cờ xuống vị trí mới, lưu lịch sử, cập nhật bàn cờ và đổi lượt chơi.
+     */
     private void processMove(Position destination) {
         GameState stateBefore = new GameState(board, currentTurn);
         boolean moved = board.move(selectedPosition, destination);
@@ -72,7 +86,10 @@ public class GameController {
             redoStack.clear();
             view.updateBoardGUI();
             checkGameState();
-
+            /**
+             * CHỨC NĂNG: UC-02.7: Switch Turn (Đổi lượt chơi)
+             * Mô tả: Đảo quyền kiểm soát bàn cờ từ Trắng sang Đen hoặc ngược lại.
+             */
             // --- BẮT ĐẦU: CỘNG GIỜ FISCHER VÀ ĐÓNG GÓI BIT ---
             if (currentTurn == Color.WHITE) {
                 whiteTimeLeft += INCREMENT;
@@ -100,16 +117,24 @@ public class GameController {
             JOptionPane.showMessageDialog(view, msg, "Lỗi di chuyển", JOptionPane.ERROR_MESSAGE);
         }
     }
-
+    /**
+     * CHỨC NĂNG: UC-02.6: Update Game State (Cập nhật trạng thái trận đấu)
+     * Mô tả: Đánh giá cục diện bàn cờ để phát hiện kịp thời các điều kiện kết thúc game.
+     */
     private void checkGameState() {
         Color opponentColor = (currentTurn == Color.WHITE) ? Color.BLACK : Color.WHITE;
         boolean inCheck = board.isInCheck(opponentColor);
         boolean canMove = board.hasValidMoves(opponentColor);
+        // CHỨC NĂNG: UC-02.6.3: Checkmate (Chiếu bí) -> Đối phương bị chiếu và không còn nước thoát
         if (inCheck && !canMove) {
             JOptionPane.showMessageDialog(view, "CHIẾU HẾT! " + (currentTurn == Color.WHITE ? "Trắng" : "Đen") + " thắng!");
-        } else if (!inCheck && !canMove) {
+        }
+        // CHỨC NĂNG: UC-02.6.2: Stalemate (Hòa cờ) -> Đối phương không bị chiếu nhưng hết nước đi hợp lệ
+        else if (!inCheck && !canMove) {
             JOptionPane.showMessageDialog(view, "HÒA CỜ (Stalemate)!");
-        } else if (inCheck) {
+        }
+        // CHỨC NĂNG: UC-02.6.1: Check (Chiếu tướng) -> Vua đối phương đang nằm trong tầm ngắm của địch
+        else if (inCheck) {
             JOptionPane.showMessageDialog(view, "Đang bị CHIẾU!");
         }
     }
