@@ -147,27 +147,46 @@ public class GameController {
     }
 
     /**
-     * UC05: Pause/Resume
-     * Chức năng: Dừng đồng hồ, vô hiệu hóa bàn cờ và hiển thị màn hình che.
+     * MÃ USE CASE: UC-05.1 và UC-05.2 (Pause/Resume Game)
+     * Chức năng: Xử lý thay đổi trạng thái Tạm dừng / Tiếp tục của trận đấu.
+     * Thỏa mãn SR1: Thao tác chuyển đổi trạng thái phải diễn ra lập tức (<0.1 giây).
      */
     public void togglePause() {
         isPaused = !isPaused;
 
         if (isPaused) {
-            gameTimer.stop();
+            /* * MÃ USE CASE: UC-05.1.1 & UC-05.1.2 (Luồng Pause)
+             * Mô tả: Gọi hàm đóng băng luồng đếm giờ và đổi trạng thái sang Paused.
+             */
+            try {
+                gameTimer.stop();
+            } catch (Exception e) {
+                /* MÃ USE CASE: A1 (UC-05.1.5) - Luồng thay thế: Bắt lỗi bất định của Timer */
+                e.printStackTrace();
+            }
 
             selectedPosition = null;
             view.resetBoardColors();
 
         } else {
-            gameTimer.start();
+            /* * MÃ USE CASE: UC-05.2.1 & UC-05.2.3 (Luồng Resume)
+             * Mô tả: Kích hoạt lại updateStateToPlaying. Tiếp tục luồng chạy của Timer.
+             */
+            try {
+                gameTimer.start();
+            } catch (Exception e) {
+                e.printStackTrace(); // Xử lý lỗi A1
+            }
         }
-
         view.updatePauseButton(isPaused);
     }
 
     public void handleSquareClick(int row, int col) {
-
+        /*
+         * MÃ USE CASE: UC-05.1.3 (Vô hiệu hóa tương tác khi Pause)
+         * Mô tả: Kiểm tra cờ isPaused. Nếu true (đang tạm dừng), mọi sự kiện click
+         * chuột vào ô cờ sẽ bị bỏ qua để ngăn chặn đi quân gian lận.
+         */
         if (isPaused || gameEnded) {
             return;
         }
@@ -182,11 +201,11 @@ public class GameController {
     }
 
     /**
-     * UC07: Resign Game
+     * UC-07: Resign Game (Đầu hàng)
      * Chức năng: Xử lý người chơi đầu hàng, xác nhận hộp thoại và kết thúc.
      */
     public void resignGame() {
-
+        // [Pre-Conditions]: Trò chơi phải đang trong trạng thái diễn ra
         if (gameEnded) {
             return;
         }
@@ -196,11 +215,16 @@ public class GameController {
                         ? "Trắng"
                         : "Đen";
 
+        // (UC-07.4): Hệ thống tự động tính toán xác lập trạng thái kết quả (Đối thủ được xử thắng)
         String winner =
                 (currentTurn == Color.WHITE)
                         ? "Đen"
                         : "Trắng";
 
+        /*
+         * (UC-07.1) & SR1: Hệ thống hiển thị hộp thoại yêu cầu xác nhận.
+         * Nút "Yes" và "No" tách biệt rõ ràng nhờ cấu trúc tiêu chuẩn của JOptionPane.
+         */
         int choice = JOptionPane.showConfirmDialog(
                 view,
                 loser + " muốn đầu hàng?",
@@ -208,18 +232,38 @@ public class GameController {
                 JOptionPane.YES_NO_OPTION
         );
 
+        // (UC-07.2): Người chơi nhấp chọn nút "Yes" để chính thức đầu hàng
         if (choice == JOptionPane.YES_OPTION) {
 
+            /*
+             * (UC-07.3) & SR2: Kích hoạt luồng "End game", khóa hoàn toàn bàn cờ.
+             * Tước bỏ quyền đi quân nhằm ngăn chặn mọi hành vi thay đổi thế cờ.
+             */
             gameEnded = true;
 
+            // (UC-07.3) & SR2: Dừng tất cả các bộ đếm thời gian của hai bên.
             gameTimer.stop();
 
+            /*
+             * SR3: Đảm bảo tính toàn vẹn dữ liệu.
+             * File savegame.txt bị xóa ngay lập tức để trận đấu kết thúc hoàn toàn.
+             */
             SaveManager.deleteSaveFile();
 
+            /*
+             * (UC-07.5): Hệ thống bật pop-up thông báo tên người thắng cuộc kèm nguyên nhân kết thúc.
+             * Ghi chú (UC-07.6): Sau khi bấm OK, bàn đấu giữ nguyên trạng thái đóng băng để người chơi nhìn lại, người chơi có thể tự thao tác "Quay lại Menu" hoặc "Chơi Game Mới" thông qua Menu điều khiển.
+             */
             JOptionPane.showMessageDialog(
                     view,
                     winner + " thắng do đối thủ đầu hàng!"
             );
+
+            /*
+             * Luồng thay thế A1 (UC-07.7) & A2:
+             * Nếu chọn "No" hoặc tắt cửa sổ (choice != YES_OPTION), hàm sẽ thoát tại đây.
+             * Hệ thống coi như hủy lệnh đầu hàng, không can thiệp vào gameEnded hay gameTimer. Trận đấu tiếp diễn.
+             */
         }
     }
 
