@@ -79,7 +79,7 @@ public class GameController {
      * Mô tả: Hạ quân cờ xuống vị trí mới, lưu lịch sử, cập nhật bàn cờ và đổi lượt chơi.
      */
     private void processMove(Position destination) {
-        GameState stateBefore = new GameState(board, currentTurn);
+        GameState stateBefore = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
         boolean moved = board.move(selectedPosition, destination);
         if (moved) {
             undoStack.push(stateBefore);
@@ -316,7 +316,7 @@ public class GameController {
 
     public void undo() {
         if (isPaused || gameEnded || undoStack.isEmpty()) return;
-        GameState currentState = new GameState(board, currentTurn);
+        GameState currentState = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
         redoStack.push(currentState);
 
         GameState previousState = undoStack.pop();
@@ -331,7 +331,7 @@ public class GameController {
 
     public void redo() {
         if (isPaused || gameEnded || redoStack.isEmpty()) return;
-        GameState currentState = new GameState(board, currentTurn);
+        GameState currentState = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
         undoStack.push(currentState);
 
         GameState nextState = redoStack.pop();
