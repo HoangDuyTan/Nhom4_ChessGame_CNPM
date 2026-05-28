@@ -214,6 +214,7 @@ public class GameWindow extends JFrame {
     }
 
     public void updateBoardGUI() {
+        resetBoardColors();
         for (int r = 0; r < 8; r++) {
             for (int c = 0; c < 8; c++) {
                 Position pos = new Position(r, c);

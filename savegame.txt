@@ -1,9 +1,9 @@
-W
-33358424
+B
+39584344
 RNBQKBNR
-PPPPPPPP
+PPPPP-PP
 --------
---------
+-----P--
 --------
 --------
 pppppppp
