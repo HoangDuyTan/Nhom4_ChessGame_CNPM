@@ -324,7 +324,8 @@ public class GameController {
         this.currentTurn = previousState.getTurn();
         this.whiteTimeLeft = previousState.getWhiteTimeLeft();
         this.blackTimeLeft = previousState.getBlackTimeLeft();
-        this.secondsElapsed = (whiteTimeLeft << 16) | (blackTimeLeft & 0xFFFF);
+
+        this.secondsElapsed = (this.whiteTimeLeft << 16) | (this.blackTimeLeft & 0xFFFF);
         view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
 
         view.updateBoardGUI();
@@ -343,7 +344,7 @@ public class GameController {
         this.currentTurn = nextState.getTurn();
         this.whiteTimeLeft = nextState.getWhiteTimeLeft();
         this.blackTimeLeft = nextState.getBlackTimeLeft();
-        this.secondsElapsed = (whiteTimeLeft << 16) | (blackTimeLeft & 0xFFFF);
+        this.secondsElapsed = (this.whiteTimeLeft << 16) | (this.blackTimeLeft & 0xFFFF);
         view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
         view.updateBoardGUI();
         selectedPosition = null;
