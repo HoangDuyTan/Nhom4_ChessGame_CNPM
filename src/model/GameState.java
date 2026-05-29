@@ -61,4 +61,7 @@ public class GameState {
     public Color getTurn() {
         return turn;
     }
+    public Piece[][] getGrid() {
+        return grid;
+    }
 }

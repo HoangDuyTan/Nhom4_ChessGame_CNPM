@@ -6,6 +6,7 @@ import model.Piece;
 import model.Position;
 import view.GameWindow;
 import view.SaveManager;
+import view.SoundManager;
 
 import javax.swing.JOptionPane;
 import java.awt.Color;
@@ -83,6 +84,7 @@ public class GameController {
         Piece movingPiece = board.get(selectedPosition);
         Piece targetPiece = board.get(destination);
         boolean moved = board.move(selectedPosition, destination);
+        SoundManager.playMove();
         if (moved) {
             MoveLog log = new MoveLog(selectedPosition, destination, movingPiece, targetPiece, currentTurn);
             System.out.println("[LỊCH SỬ NƯỚC ĐI] " + log.getStandardNotation());
