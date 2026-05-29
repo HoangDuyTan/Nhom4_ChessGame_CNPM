@@ -36,6 +36,9 @@ public class GameWindow extends JFrame {
     public GameWindow() {
         this.board = new Board();
         this.controller = new GameController(this.board, this);
+        SoundManager.setSoundEnabled(
+                SoundConfig.load()
+        );
         setTitle("CỜ VUA");
         setSize(1000, 700);
         setMinimumSize(new Dimension(850, 650));
@@ -143,14 +146,18 @@ public class GameWindow extends JFrame {
 
             if (name.equals("Quay Lại Menu")) {
                 btn.addActionListener(e -> {
+                    SoundManager.playButton();
                     new StartWindow();
                     dispose();
                 });
             } else if (name.equals("Đi Lại")) {
+                SoundManager.playButton();
                 btn.addActionListener(e -> controller.undo());
             } else if (name.equals("Đi Tiếp")) {
+                SoundManager.playButton();
                 btn.addActionListener(e -> controller.redo());
             } else if (name.equals("Chơi Game Mới")) {
+                SoundManager.playButton();
                 btn.addActionListener(e -> {
                     int choice = JOptionPane.showConfirmDialog(
                             this,
@@ -164,6 +171,7 @@ public class GameWindow extends JFrame {
                     }
                 });
             } else if (name.equals("Tạm Dừng")) {
+                SoundManager.playButton();
                 pauseButton = btn;
                 /*
                  * MÃ USE CASE: Bước 1 (UC-05.1) và Bước 6 (UC-05.2) - Trigger
@@ -174,11 +182,13 @@ public class GameWindow extends JFrame {
                     controller.togglePause();
                 });
             } else if (name.equals("Đầu Hàng")) {
+                SoundManager.playButton();
                 // (UC-07): Người chơi bấm chọn chức năng "Đầu Hàng" trên giao diện màn hình thi đấu.
                 btn.addActionListener(e -> {
                     controller.resignGame();
                 });
             } else if (name.equals("Cài Đặt")) {
+                SoundManager.playButton();
                 btn.addActionListener(e -> new SettingWindow(this));
             }
 
