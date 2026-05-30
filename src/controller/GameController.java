@@ -26,6 +26,8 @@ public class GameController {
     private int whiteTimeLeft = BASE_TIME;
     private int blackTimeLeft = BASE_TIME;
     private boolean isPaused = false;
+    private int whiteUndoLeft = 3;
+    private int blackUndoLeft = 3;
 
     private boolean gameEnded = false;
     private Stack<GameState> undoStack = new Stack<>();
@@ -322,10 +324,31 @@ public class GameController {
 
     public void undo() {
         if (isPaused || gameEnded || undoStack.isEmpty()) return;
+
+        // --- KIỂM TRA GIỚI HẠN LƯỢT UNDO ---
+        // Nếu lượt hiện tại là Đen -> nước cờ trước đó là của Trắng, cần trừ lượt Trắng
+        if (currentTurn == Color.BLACK) {
+            if (whiteUndoLeft <= 0) {
+                JOptionPane.showMessageDialog(view, "Quân TRẮNG đã hết lượt Đi Lại (Tối đa 3 lần)!", "Thông báo", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            whiteUndoLeft--;
+            System.out.println("[SYSTEM] Trắng vừa dùng 1 lần Undo. Còn lại: " + whiteUndoLeft);
+        } else { // Lượt hiện tại là Trắng -> nước cờ trước đó của Đen, trừ lượt Đen
+            if (blackUndoLeft <= 0) {
+                JOptionPane.showMessageDialog(view, "Quân ĐEN đã hết lượt Đi Lại (Tối đa 3 lần)!", "Thông báo", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            blackUndoLeft--;
+            System.out.println("[SYSTEM] Đen vừa dùng 1 lần Undo. Còn lại: " + blackUndoLeft);
+        }
+        // -----------------------------------
+
         this.selectedPosition = null;
         view.resetBoardColors();
         GameState currentState = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
         redoStack.push(currentState);
+
         GameState previousState = undoStack.pop();
         for (int r = 0; r < 8; r++) {
             for (int c = 0; c < 8; c++) {
@@ -365,7 +388,8 @@ public class GameController {
         this.selectedPosition = null;
         this.gameEnded = false;
         this.isPaused = false;
-
+        this.whiteUndoLeft = 3;
+        this.blackUndoLeft = 3;
         if (gameTimer != null) {
             gameTimer.stop();
         }
