@@ -82,13 +82,21 @@ public class GameController {
      * Mô tả: Hạ quân cờ xuống vị trí mới, lưu lịch sử, cập nhật bàn cờ và đổi lượt chơi.
      */
     private void processMove(Position destination) {
+        processMoveFrom(selectedPosition, destination);
+    }
+
+    private void processMoveFrom(Position from, Position destination) {
+        if (from == null || destination == null || !from.isValid() || !destination.isValid()) {
+            return;
+        }
+
         GameState stateBefore = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
-        Piece movingPiece = board.get(selectedPosition);
+        Piece movingPiece = board.get(from);
         Piece targetPiece = board.get(destination);
-        boolean moved = board.move(selectedPosition, destination);
-        SoundManager.playMove();
+        boolean moved = board.move(from, destination);
         if (moved) {
-            MoveLog log = new MoveLog(selectedPosition, destination, movingPiece, targetPiece, currentTurn);
+            SoundManager.playMove();
+            MoveLog log = new MoveLog(from, destination, movingPiece, targetPiece, currentTurn);
             System.out.println("[LỊCH SỬ NƯỚC ĐI] " + log.getStandardNotation());
             undoStack.push(stateBefore);
             redoStack.clear();
@@ -231,6 +239,59 @@ public class GameController {
         } else {
             handleMoveOrReSelection(clicked);
         }
+    }
+
+    public boolean canStartDrag(int row, int col) {
+        if (isPaused || gameEnded) {
+            return false;
+        }
+
+        Position position = new Position(row, col);
+        if (!position.isValid()) {
+            return false;
+        }
+
+        Piece piece = board.get(position);
+        return piece != null && piece.getColor() == currentTurn;
+    }
+
+    public void previewDragFrom(int row, int col) {
+        if (!canStartDrag(row, col)) {
+            return;
+        }
+
+        Position from = new Position(row, col);
+        view.resetBoardColors();
+        view.highlightValidMoves(from, board);
+    }
+
+    public void handleDragDrop(int fromRow, int fromCol, int toRow, int toCol) {
+        if (isPaused || gameEnded) {
+            return;
+        }
+
+        Position from = new Position(fromRow, fromCol);
+        Position to = new Position(toRow, toCol);
+        if (!from.isValid() || !to.isValid()) {
+            selectedPosition = null;
+            view.resetBoardColors();
+            view.updateBoardGUI();
+            return;
+        }
+
+        Piece movingPiece = board.get(from);
+        if (movingPiece == null || movingPiece.getColor() != currentTurn) {
+            selectedPosition = null;
+            view.resetBoardColors();
+            view.updateBoardGUI();
+            return;
+        }
+
+        selectedPosition = from;
+        processMoveFrom(from, to);
+        selectedPosition = null;
+        view.resetBoardColors();
+        view.updateBoardGUI();
     }
 
     /**

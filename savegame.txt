@@ -1,10 +1,10 @@
-B
-39584327
+W
+38863448
 RNBQKBNR
-PPPP--PP
-----P---
------P--
------p--
+PPPP-PPP
 --------
-ppppp-pp
+----P---
+------p-
+--------
+pppppp-p
 rnbqkbnr
