@@ -10,6 +10,7 @@ import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
 import java.io.File;
 
@@ -32,10 +33,17 @@ public class GameWindow extends JFrame {
     private JButton pauseButton;
     private JLayeredPane layeredPane;
     private JPanel pauseOverlay;
+    private JPanel boardPanel;
+    private Position dragStartPosition;
+    private boolean draggingPiece;
 
     public GameWindow() {
+        this(false);
+    }
+
+    public GameWindow(boolean playWithAI) {
         this.board = new Board();
-        this.controller = new GameController(this.board, this);
+        this.controller = new GameController(this.board, this, playWithAI);
         SoundManager.setSoundEnabled(
                 SoundConfig.load()
         );
@@ -47,7 +55,7 @@ public class GameWindow extends JFrame {
         setLayout(new BorderLayout(10, 0));
         JPanel mainBoardContainer = new JPanel(new BorderLayout(5, 5));
         mainBoardContainer.setBackground(CONTROL_PANEL_BG);
-        JPanel boardPanel = new JPanel(new GridLayout(8, 8));
+        boardPanel = new JPanel(new GridLayout(8, 8));
         for (int r = 7; r >= 0; r--) {
             for (int c = 0; c < 8; c++) {
                 JButton square = new JButton();
@@ -67,6 +75,7 @@ public class GameWindow extends JFrame {
                 square.addActionListener(e -> {
                     controller.handleSquareClick(row, col);
                 });
+                installDragAndDrop(square, row, col);
                 boardPanel.add(square);
             }
         }
@@ -221,6 +230,59 @@ public class GameWindow extends JFrame {
         updateBoardGUI();
 
         setVisible(true);
+    }
+
+    private void installDragAndDrop(JButton square, int row, int col) {
+        square.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                dragStartPosition = null;
+                draggingPiece = false;
+
+                if (controller.canStartDrag(row, col)) {
+                    dragStartPosition = new Position(row, col);
+                    draggingPiece = true;
+                    square.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+                    controller.previewDragFrom(row, col);
+                }
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (!draggingPiece || dragStartPosition == null) {
+                    return;
+                }
+
+                square.setCursor(Cursor.getDefaultCursor());
+                Position dropPosition = getDropPosition(e);
+                if (dropPosition == null) {
+                    resetBoardColors();
+                    updateBoardGUI();
+                } else if (!dragStartPosition.equals(dropPosition)) {
+                    controller.handleDragDrop(
+                            dragStartPosition.getR(),
+                            dragStartPosition.getC(),
+                            dropPosition.getR(),
+                            dropPosition.getC()
+                    );
+                }
+
+                dragStartPosition = null;
+                draggingPiece = false;
+            }
+        });
+    }
+
+    private Position getDropPosition(MouseEvent e) {
+        Point boardPoint = SwingUtilities.convertPoint((Component) e.getSource(), e.getPoint(), boardPanel);
+        if (!boardPanel.contains(boardPoint) || boardPanel.getWidth() <= 0 || boardPanel.getHeight() <= 0) {
+            return null;
+        }
+
+        int col = Math.min(7, Math.max(0, boardPoint.x * 8 / boardPanel.getWidth()));
+        int displayedRow = Math.min(7, Math.max(0, boardPoint.y * 8 / boardPanel.getHeight()));
+        int row = 7 - displayedRow;
+        return new Position(row, col);
     }
 
     public void updateBoardGUI() {
