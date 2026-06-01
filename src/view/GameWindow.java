@@ -38,8 +38,12 @@ public class GameWindow extends JFrame {
     private boolean draggingPiece;
 
     public GameWindow() {
+        this(false);
+    }
+
+    public GameWindow(boolean playWithAI) {
         this.board = new Board();
-        this.controller = new GameController(this.board, this);
+        this.controller = new GameController(this.board, this, playWithAI);
         SoundManager.setSoundEnabled(
                 SoundConfig.load()
         );

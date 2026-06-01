@@ -76,6 +76,14 @@ public class StartWindow extends JFrame {
         });
 
         JButton guideButton = new JButton("HƯỚNG DẪN");
+        JButton aiButton = new JButton("CHƠI VỚI MÁY");
+        styleButton(aiButton);
+        aiButton.addActionListener(e -> {
+            SaveManager.deleteSaveFile();
+            new GameWindow(true);
+            dispose();
+        });
+
         styleButton(guideButton);
         guideButton.addActionListener(e -> {
             JOptionPane.showMessageDialog(this,
@@ -108,6 +116,8 @@ public class StartWindow extends JFrame {
         panel.add(titleLabel);
         panel.add(Box.createVerticalStrut(90));
         panel.add(startButton);
+        panel.add(Box.createVerticalStrut(25));
+        panel.add(aiButton);
         panel.add(Box.createVerticalStrut(25));
         panel.add(guideButton);
         panel.add(Box.createVerticalStrut(25));

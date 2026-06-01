@@ -10,6 +10,9 @@ import view.SoundManager;
 
 import javax.swing.JOptionPane;
 import java.awt.Color;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 import java.util.Stack;
 import javax.swing.Timer;
 
@@ -32,10 +35,19 @@ public class GameController {
     private boolean gameEnded = false;
     private Stack<GameState> undoStack = new Stack<>();
     private Stack<GameState> redoStack = new Stack<>();
+    private boolean playWithAI = false;
+    private final Color aiColor = Color.BLACK;
+    private boolean aiThinking = false;
+    private final Random random = new Random();
 
     public GameController(Board board, GameWindow view) {
+        this(board, view, false);
+    }
+
+    public GameController(Board board, GameWindow view, boolean playWithAI) {
         this.board = board;
         this.view = view;
+        this.playWithAI = playWithAI;
 
         startTimer();
     }
@@ -59,6 +71,7 @@ public class GameController {
              */
             view.highlightValidMoves(clicked, board);
         }
+
     }
     /**
      * CHỨC NĂNG: Điều phối hành động nhấp chuột khi đã có quân cờ được chọn trước đó
@@ -86,6 +99,10 @@ public class GameController {
     }
 
     private void processMoveFrom(Position from, Position destination) {
+        processMoveFrom(from, destination, null, true);
+    }
+
+    private void processMoveFrom(Position from, Position destination, String promotionChoice, boolean showInvalidMessage) {
         if (from == null || destination == null || !from.isValid() || !destination.isValid()) {
             return;
         }
@@ -93,7 +110,7 @@ public class GameController {
         GameState stateBefore = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
         Piece movingPiece = board.get(from);
         Piece targetPiece = board.get(destination);
-        boolean moved = board.move(from, destination);
+        boolean moved = board.move(from, destination, promotionChoice);
         if (moved) {
             SoundManager.playMove();
             MoveLog log = new MoveLog(from, destination, movingPiece, targetPiece, currentTurn);
@@ -102,6 +119,11 @@ public class GameController {
             redoStack.clear();
             view.updateBoardGUI();
             checkGameState();
+            if (gameEnded) {
+                selectedPosition = null;
+                view.resetBoardColors();
+                return;
+            }
             /**
              * CHỨC NĂNG: UC-02.7: Switch Turn (Đổi lượt chơi)
              * Mô tả: Đảo quyền kiểm soát bàn cờ từ Trắng sang Đen hoặc ngược lại.
@@ -126,7 +148,8 @@ public class GameController {
             SaveLoadController.autoSave(currentTurn, board, secondsElapsed);
             selectedPosition = null;
             view.resetBoardColors();
-        } else {
+            triggerAIMoveIfNeeded();
+        } else if (showInvalidMessage) {
             String msg = board.isInCheck(currentTurn)
                     ? "Bạn đang bị chiếu! Hãy chọn nước đi bảo vệ Vua."
                     : "Nước đi không hợp lệ!";
@@ -143,16 +166,174 @@ public class GameController {
         boolean canMove = board.hasValidMoves(opponentColor);
         // CHỨC NĂNG: UC-02.6.3: Checkmate (Chiếu bí) -> Đối phương bị chiếu và không còn nước thoát
         if (inCheck && !canMove) {
+            gameEnded = true;
+            gameTimer.stop();
+            SaveManager.deleteSaveFile();
             JOptionPane.showMessageDialog(view, "CHIẾU HẾT! " + (currentTurn == Color.WHITE ? "Trắng" : "Đen") + " thắng!");
         }
         // CHỨC NĂNG: UC-02.6.2: Stalemate (Hòa cờ) -> Đối phương không bị chiếu nhưng hết nước đi hợp lệ
         else if (!inCheck && !canMove) {
+            gameEnded = true;
+            gameTimer.stop();
+            SaveManager.deleteSaveFile();
             JOptionPane.showMessageDialog(view, "HÒA CỜ (Stalemate)!");
         }
         // CHỨC NĂNG: UC-02.6.1: Check (Chiếu tướng) -> Vua đối phương đang nằm trong tầm ngắm của địch
         else if (inCheck) {
             JOptionPane.showMessageDialog(view, "Đang bị CHIẾU!");
         }
+    }
+
+    private boolean isAITurn() {
+        return playWithAI && currentTurn == aiColor;
+    }
+
+    private void triggerAIMoveIfNeeded() {
+        if (!isAITurn() || aiThinking || gameEnded || isPaused) {
+            return;
+        }
+
+        aiThinking = true;
+        selectedPosition = null;
+        view.resetBoardColors();
+
+        Timer aiTimer = new Timer(450, e -> {
+            aiThinking = false;
+            if (isAITurn() && !gameEnded && !isPaused) {
+                makeAIMove();
+            }
+        });
+        aiTimer.setRepeats(false);
+        aiTimer.start();
+    }
+
+    private void makeAIMove() {
+        AIMove bestMove = chooseAIMove();
+        if (bestMove == null) {
+            gameEnded = true;
+            gameTimer.stop();
+            SaveManager.deleteSaveFile();
+            return;
+        }
+
+        processMoveFrom(bestMove.getFrom(), bestMove.getTo(), "Queen", false);
+    }
+
+    private AIMove chooseAIMove() {
+        List<AIMove> legalMoves = getLegalMoves(aiColor);
+        AIMove bestMove = null;
+        int bestScore = Integer.MIN_VALUE;
+
+        for (AIMove move : legalMoves) {
+            int score = scoreAIMove(move);
+            if (score > bestScore || (score == bestScore && random.nextBoolean())) {
+                bestScore = score;
+                bestMove = move;
+            }
+        }
+
+        return bestMove;
+    }
+
+    private List<AIMove> getLegalMoves(Color color) {
+        List<AIMove> moves = new ArrayList<>();
+        for (int fromRow = 0; fromRow < 8; fromRow++) {
+            for (int fromCol = 0; fromCol < 8; fromCol++) {
+                Position from = new Position(fromRow, fromCol);
+                Piece piece = board.get(from);
+                if (piece == null || piece.getColor() != color) {
+                    continue;
+                }
+
+                for (int toRow = 0; toRow < 8; toRow++) {
+                    for (int toCol = 0; toCol < 8; toCol++) {
+                        Position to = new Position(toRow, toCol);
+                        if (piece.isValidMove(from, to, board)
+                                && !board.simulateMoveAndCheck(from, to, color)) {
+                            moves.add(new AIMove(from, to));
+                        }
+                    }
+                }
+            }
+        }
+        return moves;
+    }
+
+    private int scoreAIMove(AIMove move) {
+        Position from = move.getFrom();
+        Position to = move.getTo();
+        Piece movingPiece = board.get(from);
+        Piece capturedPiece = board.get(to);
+        int score = random.nextInt(7);
+
+        if (capturedPiece != null) {
+            score += pieceValue(capturedPiece) * 10 - pieceValue(movingPiece);
+        } else if (movingPiece instanceof Pawn
+                && board.getEnPassantTarget() != null
+                && board.getEnPassantTarget().equals(to)
+                && from.getC() != to.getC()) {
+            score += pieceValue(new Pawn(currentTurn)) * 10;
+        }
+
+        if (movingPiece instanceof Pawn && (to.getR() == 0 || to.getR() == 7)) {
+            score += pieceValue(new Queen(movingPiece.getColor())) - pieceValue(movingPiece);
+        }
+
+        score += centerBonus(to);
+
+        GameState snapshot = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
+        if (board.move(from, to, "Queen")) {
+            Color opponentColor = aiColor == Color.WHITE ? Color.BLACK : Color.WHITE;
+            score += evaluateBoardFor(aiColor);
+            if (board.isInCheck(opponentColor)) {
+                score += 35;
+            }
+            if (!board.hasValidMoves(opponentColor)) {
+                score += board.isInCheck(opponentColor) ? 100000 : 0;
+            }
+        } else {
+            score = Integer.MIN_VALUE;
+        }
+        snapshot.restore(board);
+
+        return score;
+    }
+
+    private int evaluateBoardFor(Color color) {
+        int score = 0;
+        for (int row = 0; row < 8; row++) {
+            for (int col = 0; col < 8; col++) {
+                Piece piece = board.get(new Position(row, col));
+                if (piece == null) {
+                    continue;
+                }
+
+                int value = pieceValue(piece);
+                int direction = piece.getColor() == Color.WHITE ? row : 7 - row;
+                if (piece instanceof Pawn) {
+                    value += direction * 5;
+                }
+                value += centerBonus(new Position(row, col)) / 2;
+                score += piece.getColor() == color ? value : -value;
+            }
+        }
+        return score;
+    }
+
+    private int centerBonus(Position position) {
+        int rowDistance = Math.abs(position.getR() - 3) + Math.abs(position.getR() - 4);
+        int colDistance = Math.abs(position.getC() - 3) + Math.abs(position.getC() - 4);
+        return 14 - rowDistance - colDistance;
+    }
+
+    private int pieceValue(Piece piece) {
+        if (piece instanceof Pawn) return 100;
+        if (piece instanceof Knight) return 320;
+        if (piece instanceof Bishop) return 330;
+        if (piece instanceof Rook) return 500;
+        if (piece instanceof Queen) return 900;
+        if (piece instanceof King) return 20000;
+        return 0;
     }
 
     private void startTimer() {
@@ -220,6 +401,7 @@ public class GameController {
             }
         }
         view.updatePauseButton(isPaused);
+        triggerAIMoveIfNeeded();
     }
 
     public void handleSquareClick(int row, int col) {
@@ -228,7 +410,7 @@ public class GameController {
          * Mô tả: Kiểm tra cờ isPaused. Nếu true (đang tạm dừng), mọi sự kiện click
          * chuột vào ô cờ sẽ bị bỏ qua để ngăn chặn đi quân gian lận.
          */
-        if (isPaused || gameEnded) {
+        if (isPaused || gameEnded || isAITurn() || aiThinking) {
             return;
         }
 
@@ -242,7 +424,7 @@ public class GameController {
     }
 
     public boolean canStartDrag(int row, int col) {
-        if (isPaused || gameEnded) {
+        if (isPaused || gameEnded || isAITurn() || aiThinking) {
             return false;
         }
 
@@ -266,7 +448,7 @@ public class GameController {
     }
 
     public void handleDragDrop(int fromRow, int fromCol, int toRow, int toCol) {
-        if (isPaused || gameEnded) {
+        if (isPaused || gameEnded || isAITurn() || aiThinking) {
             return;
         }
 

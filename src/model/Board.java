@@ -62,6 +62,10 @@ public class Board {
      * và cập nhật trực tiếp vị trí mới của quân cờ lên ma trận dữ liệu grid[8][8].
      */
     public boolean move(Position from, Position to) {
+        return move(from, to, null);
+    }
+
+    public boolean move(Position from, Position to, String promotionChoice) {
         Piece piece = get(from);
         if (piece == null) return false;
         if (!piece.isValidMove(from, to, this)) return false;
@@ -120,8 +124,8 @@ public class Board {
             boolean promote = (piece.getColor() == Color.WHITE && to.getR() == 7) || (piece.getColor() == Color.BLACK && to.getR() == 0);
             if (promote) {
                 String[] options = {"Queen", "Rook", "Bishop", "Knight"};
-                String choice = options[0];
-                if (!GraphicsEnvironment.isHeadless()) {
+                String choice = promotionChoice;
+                if (choice == null && !GraphicsEnvironment.isHeadless()) {
                     choice = (String) JOptionPane.showInputDialog(
                         null,
                         "Chọn quân để phong cấp:",
