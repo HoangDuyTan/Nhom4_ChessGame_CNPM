@@ -239,11 +239,10 @@ public class GameWindow extends JFrame {
                 dragStartPosition = null;
                 draggingPiece = false;
 
-                if (controller.canStartDrag(row, col)) {
+                if (controller.beginDragFrom(row, col)) {
                     dragStartPosition = new Position(row, col);
                     draggingPiece = true;
                     square.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
-                    controller.previewDragFrom(row, col);
                 }
             }
 
@@ -257,8 +256,9 @@ public class GameWindow extends JFrame {
                 Position dropPosition = getDropPosition(e);
                 if (dropPosition == null) {
                     resetBoardColors();
-                    updateBoardGUI();
-                } else if (!dragStartPosition.equals(dropPosition)) {
+                } else if (dragStartPosition.equals(dropPosition)) {
+                    resetBoardColors();
+                } else {
                     controller.handleDragDrop(
                             dragStartPosition.getR(),
                             dragStartPosition.getC(),
