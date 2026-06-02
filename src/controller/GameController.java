@@ -100,15 +100,15 @@ public class GameController {
         processMoveFrom(selectedPosition, destination);
     }
 
-    private void processMoveFrom(Position from, Position destination) {
-        processMoveFrom(from, destination, null, true);
+    private boolean processMoveFrom(Position from, Position destination) {
+        return processMoveFrom(from, destination, null, true);
     }
     public List<MoveLog> getMoveHistory() {
         return moveHistory;
     }
-    private void processMoveFrom(Position from, Position destination, String promotionChoice, boolean showInvalidMessage) {
+    private boolean processMoveFrom(Position from, Position destination, String promotionChoice, boolean showInvalidMessage) {
         if (from == null || destination == null || !from.isValid() || !destination.isValid()) {
-            return;
+            return false;
         }
 
         GameState stateBefore = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
@@ -128,7 +128,7 @@ public class GameController {
             if (gameEnded) {
                 selectedPosition = null;
                 view.resetBoardColors();
-                return;
+                return true;
             }
             /**
              * CHỨC NĂNG: UC-02.7: Switch Turn (Đổi lượt chơi)
@@ -155,12 +155,14 @@ public class GameController {
             selectedPosition = null;
             view.resetBoardColors();
             triggerAIMoveIfNeeded();
+            return true;
         } else if (showInvalidMessage) {
             String msg = board.isInCheck(currentTurn)
                     ? "Bạn đang bị chiếu! Hãy chọn nước đi bảo vệ Vua."
                     : "Nước đi không hợp lệ!";
             JOptionPane.showMessageDialog(view, msg, "Lỗi di chuyển", JOptionPane.ERROR_MESSAGE);
         }
+        return false;
     }
     /**
      * CHỨC NĂNG: UC-02.6: Update Game State (Cập nhật trạng thái trận đấu)
@@ -260,8 +262,7 @@ public class GameController {
                 for (int toRow = 0; toRow < 8; toRow++) {
                     for (int toCol = 0; toCol < 8; toCol++) {
                         Position to = new Position(toRow, toCol);
-                        if (piece.isValidMove(from, to, board)
-                                && !board.simulateMoveAndCheck(from, to, color)) {
+                        if (board.isLegalMove(from, to)) {
                             moves.add(new AIMove(from, to));
                         }
                     }
@@ -435,7 +436,7 @@ public class GameController {
         }
     }
 
-    public boolean canStartDrag(int row, int col) {
+    public boolean beginDragFrom(int row, int col) {
         if (isPaused || gameEnded || isAITurn() || aiThinking) {
             return false;
         }
@@ -446,19 +447,15 @@ public class GameController {
         }
 
         Piece piece = board.get(position);
-        return piece != null && piece.getColor() == currentTurn;
-    }
-
-    public void previewDragFrom(int row, int col) {
-        if (!canStartDrag(row, col)) {
-            return;
+        if (piece == null || piece.getColor() != currentTurn) {
+            return false;
         }
 
-        Position from = new Position(row, col);
         view.resetBoardColors();
         if (!GameConfig.isAdvancedMode()) {
             view.highlightValidMoves(from, board);
         }
+        return true;
     }
 
     public void handleDragDrop(int fromRow, int fromCol, int toRow, int toCol) {
@@ -471,7 +468,6 @@ public class GameController {
         if (!from.isValid() || !to.isValid()) {
             selectedPosition = null;
             view.resetBoardColors();
-            view.updateBoardGUI();
             return;
         }
 
@@ -479,15 +475,14 @@ public class GameController {
         if (movingPiece == null || movingPiece.getColor() != currentTurn) {
             selectedPosition = null;
             view.resetBoardColors();
-            view.updateBoardGUI();
             return;
         }
 
-        selectedPosition = from;
-        processMoveFrom(from, to);
         selectedPosition = null;
-        view.resetBoardColors();
-        view.updateBoardGUI();
+        boolean moved = processMoveFrom(from, to);
+        if (!moved) {
+            view.resetBoardColors();
+        }
     }
 
     /**
