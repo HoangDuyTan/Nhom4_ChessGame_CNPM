@@ -4,6 +4,7 @@ import model.*;
 import model.GameState;
 import model.Piece;
 import model.Position;
+import view.GameConfig;
 import view.GameWindow;
 import view.SaveManager;
 import view.SoundManager;
@@ -69,7 +70,9 @@ public class GameController {
              * CHỨC NĂNG: UC-02.3: Check Available Move (Kiểm tra nước đi có sẵn)
              * Mô tả: Hệ thống tự động tính toán luật đi của quân cờ để highlight các ô đích khả dụng.
              */
-            view.highlightValidMoves(clicked, board);
+            if (!GameConfig.isAdvancedMode()) {
+                view.highlightValidMoves(clicked, board);
+            }
         }
 
     }
@@ -85,7 +88,9 @@ public class GameController {
         } else if (pieceAtClicked != null && pieceAtClicked.getColor() == currentTurn) {
             selectedPosition = clicked;
             view.resetBoardColors();
-            view.highlightValidMoves(clicked, board);
+            if (!GameConfig.isAdvancedMode()) {
+                view.highlightValidMoves(clicked, board);
+            }
         } else {
             processMove(clicked);
         }
@@ -448,7 +453,9 @@ public class GameController {
 
         Position from = new Position(row, col);
         view.resetBoardColors();
-        view.highlightValidMoves(from, board);
+        if (!GameConfig.isAdvancedMode()) {
+            view.highlightValidMoves(from, board);
+        }
     }
 
     public void handleDragDrop(int fromRow, int fromCol, int toRow, int toCol) {
