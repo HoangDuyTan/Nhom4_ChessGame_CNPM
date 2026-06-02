@@ -29,8 +29,7 @@ public class GameController {
     private int whiteTimeLeft = BASE_TIME;
     private int blackTimeLeft = BASE_TIME;
     private boolean isPaused = false;
-    private int whiteUndoLeft = 3;
-    private int blackUndoLeft = 3;
+    private boolean hasUndoneThisTurn = false;
 
     private boolean gameEnded = false;
     private Stack<GameState> undoStack = new Stack<>();
@@ -39,6 +38,7 @@ public class GameController {
     private final Color aiColor = Color.BLACK;
     private boolean aiThinking = false;
     private final Random random = new Random();
+    private int undoCount = 0;
 
     public GameController(Board board, GameWindow view) {
         this(board, view, false);
@@ -117,6 +117,7 @@ public class GameController {
             System.out.println("[LỊCH SỬ NƯỚC ĐI] " + log.getStandardNotation());
             undoStack.push(stateBefore);
             redoStack.clear();
+            this.undoCount = 0;
             view.updateBoardGUI();
             checkGameState();
             if (gameEnded) {
@@ -141,7 +142,7 @@ public class GameController {
 
             currentTurn = (currentTurn == Color.WHITE) ? Color.BLACK : Color.WHITE;
             view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
-
+            this.hasUndoneThisTurn = true;
             /* * [TRIGGER AUTO-SAVE]: Kích hoạt UC-04.1 (Tự động lưu ván đấu)
              * Chức năng: Đảm bảo tính bền vững dữ liệu ngay sau khi một nước đi hợp lệ được thực hiện xong.
              */
@@ -564,86 +565,99 @@ public class GameController {
 
         view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
     }
-
     public void undo() {
-        if (isPaused || gameEnded || undoStack.isEmpty()) return;
-
-        // --- KIỂM TRA GIỚI HẠN LƯỢT UNDO ---
-        // Nếu lượt hiện tại là Đen -> nước cờ trước đó là của Trắng, cần trừ lượt Trắng
-        if (currentTurn == Color.BLACK) {
-            if (whiteUndoLeft <= 0) {
-                JOptionPane.showMessageDialog(view, "Quân TRẮNG đã hết lượt Đi Lại (Tối đa 3 lần)!", "Thông báo", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-            whiteUndoLeft--;
-            System.out.println("[SYSTEM] Trắng vừa dùng 1 lần Undo. Còn lại: " + whiteUndoLeft);
-        } else { // Lượt hiện tại là Trắng -> nước cờ trước đó của Đen, trừ lượt Đen
-            if (blackUndoLeft <= 0) {
-                JOptionPane.showMessageDialog(view, "Quân ĐEN đã hết lượt Đi Lại (Tối đa 3 lần)!", "Thông báo", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-            blackUndoLeft--;
-            System.out.println("[SYSTEM] Đen vừa dùng 1 lần Undo. Còn lại: " + blackUndoLeft);
+        if (isPaused || gameEnded || undoStack.isEmpty() || aiThinking) {
+            return;
         }
-        // -----------------------------------
-
+        if (this.undoCount > 0) {
+            JOptionPane.showMessageDialog(view,
+                    "Bạn chỉ được phép Lùi lại 1 lần trong 1 nước đi!\nHãy thực hiện nước đi mới hoặc nhấn Tiến lên.",
+                    "Thông báo", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
         this.selectedPosition = null;
         view.resetBoardColors();
         GameState currentState = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
         redoStack.push(currentState);
 
-        GameState previousState = undoStack.pop();
-        for (int r = 0; r < 8; r++) {
-            for (int c = 0; c < 8; c++) {
-                Position pos = new Position(r, c);
-                board.set(pos, previousState.getGrid()[r][c]);
+        if (playWithAI) {
+            if (undoStack.size() < 2) {
+                redoStack.pop();
+                return;
             }
+            GameState aiState = undoStack.pop();
+            redoStack.push(aiState);
+            GameState playersPreviousState = undoStack.pop();
+            playersPreviousState.restore(board);
+
+            this.currentTurn = playersPreviousState.getTurn();
+            this.whiteTimeLeft = playersPreviousState.getWhiteTimeLeft();
+            this.blackTimeLeft = playersPreviousState.getBlackTimeLeft();
+        } else {
+            GameState previousState = undoStack.pop();
+            previousState.restore(board);
+
+            this.currentTurn = previousState.getTurn();
+            this.whiteTimeLeft = previousState.getWhiteTimeLeft();
+            this.blackTimeLeft = previousState.getBlackTimeLeft();
         }
-        this.currentTurn = previousState.getTurn();
-        this.whiteTimeLeft = previousState.getWhiteTimeLeft();
-        this.blackTimeLeft = previousState.getBlackTimeLeft();
+
         this.secondsElapsed = (this.whiteTimeLeft << 16) | (this.blackTimeLeft & 0xFFFF);
+
+        this.undoCount++;
+        System.out.println("[SYSTEM] Đã thực hiện Undo.");
         view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
         view.updateBoardGUI();
         SaveLoadController.autoSave(currentTurn, board, secondsElapsed);
     }
-
     public void redo() {
-        if (isPaused || gameEnded || redoStack.isEmpty()) return;
+        if (isPaused || gameEnded || redoStack.isEmpty() || aiThinking) {
+            return;
+        }
         this.selectedPosition = null;
         view.resetBoardColors();
         GameState currentState = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
         undoStack.push(currentState);
-        GameState nextState = redoStack.pop();
-        nextState.restore(board);
-        this.currentTurn = nextState.getTurn();
-        this.whiteTimeLeft = nextState.getWhiteTimeLeft();
-        this.blackTimeLeft = nextState.getBlackTimeLeft();
+        if (playWithAI) {
+            if (redoStack.size() < 2) {
+                undoStack.pop();
+                return;
+            }
+            undoStack.push(redoStack.pop());
+            GameState aiNextState = redoStack.pop();
+            aiNextState.restore(board);
+            this.currentTurn = aiNextState.getTurn();
+            this.whiteTimeLeft = aiNextState.getWhiteTimeLeft();
+            this.blackTimeLeft = aiNextState.getBlackTimeLeft();
+        } else {
+            GameState nextState = redoStack.pop();
+            nextState.restore(board);
+            this.currentTurn = nextState.getTurn();
+            this.whiteTimeLeft = nextState.getWhiteTimeLeft();
+            this.blackTimeLeft = nextState.getBlackTimeLeft();
+        }
         this.secondsElapsed = (this.whiteTimeLeft << 16) | (this.blackTimeLeft & 0xFFFF);
+        this.undoCount++;
+        System.out.println("[SYSTEM] Đã thực hiện Redo.");
         view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
         view.updateBoardGUI();
         SaveLoadController.autoSave(currentTurn, board, secondsElapsed);
     }
     public void restartGame() {
         this.board.reset();
-
         this.currentTurn = Color.WHITE;
         this.selectedPosition = null;
         this.gameEnded = false;
         this.isPaused = false;
-        this.whiteUndoLeft = 3;
-        this.blackUndoLeft = 3;
+        this.hasUndoneThisTurn = false;
         if (gameTimer != null) {
             gameTimer.stop();
         }
         this.whiteTimeLeft = BASE_TIME;
         this.blackTimeLeft = BASE_TIME;
-
         startTimer();
-
         undoStack.clear();
         redoStack.clear();
-
         view.resetBoardColors();
         view.updateBoardGUI();
         view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
