@@ -38,6 +38,7 @@ public class GameController {
     private final Color aiColor = Color.BLACK;
     private boolean aiThinking = false;
     private final Random random = new Random();
+    private int undoCount = 0;
 
     public GameController(Board board, GameWindow view) {
         this(board, view, false);
@@ -116,6 +117,7 @@ public class GameController {
             System.out.println("[LỊCH SỬ NƯỚC ĐI] " + log.getStandardNotation());
             undoStack.push(stateBefore);
             redoStack.clear();
+            this.undoCount = 0;
             view.updateBoardGUI();
             checkGameState();
             if (gameEnded) {
@@ -140,7 +142,7 @@ public class GameController {
 
             currentTurn = (currentTurn == Color.WHITE) ? Color.BLACK : Color.WHITE;
             view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
-            this.hasUndoneThisTurn = false;
+            this.hasUndoneThisTurn = true;
             /* * [TRIGGER AUTO-SAVE]: Kích hoạt UC-04.1 (Tự động lưu ván đấu)
              * Chức năng: Đảm bảo tính bền vững dữ liệu ngay sau khi một nước đi hợp lệ được thực hiện xong.
              */
@@ -564,11 +566,12 @@ public class GameController {
         view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
     }
     public void undo() {
-        if (isPaused || gameEnded || undoStack.isEmpty() || aiThinking) return;
-
-        if (hasUndoneThisTurn) {
+        if (isPaused || gameEnded || undoStack.isEmpty() || aiThinking) {
+            return;
+        }
+        if (this.undoCount > 0) {
             JOptionPane.showMessageDialog(view,
-                    "Bạn chỉ được phép Lùi lại 1 lần trong một nước đi!\nHãy thực hiện nước đi mới hoặc nhấn Tiến lên.",
+                    "Bạn chỉ được phép Lùi lại 1 lần trong 1 nước đi!\nHãy thực hiện nước đi mới hoặc nhấn Tiến lên.",
                     "Thông báo", JOptionPane.WARNING_MESSAGE);
             return;
         }
@@ -582,10 +585,8 @@ public class GameController {
                 redoStack.pop();
                 return;
             }
-
             GameState aiState = undoStack.pop();
             redoStack.push(aiState);
-
             GameState playersPreviousState = undoStack.pop();
             playersPreviousState.restore(board);
 
@@ -603,16 +604,16 @@ public class GameController {
 
         this.secondsElapsed = (this.whiteTimeLeft << 16) | (this.blackTimeLeft & 0xFFFF);
 
-        this.hasUndoneThisTurn = true;
-
-        System.out.println("[SYSTEM] Đã thực hiện Undo. Khóa chức năng Undo liên tiếp.");
+        this.undoCount++;
+        System.out.println("[SYSTEM] Đã thực hiện Undo.");
         view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
         view.updateBoardGUI();
         SaveLoadController.autoSave(currentTurn, board, secondsElapsed);
     }
     public void redo() {
-        if (isPaused || gameEnded || redoStack.isEmpty() || aiThinking) return;
-
+        if (isPaused || gameEnded || redoStack.isEmpty() || aiThinking) {
+            return;
+        }
         this.selectedPosition = null;
         view.resetBoardColors();
         GameState currentState = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
@@ -635,10 +636,9 @@ public class GameController {
             this.whiteTimeLeft = nextState.getWhiteTimeLeft();
             this.blackTimeLeft = nextState.getBlackTimeLeft();
         }
-
         this.secondsElapsed = (this.whiteTimeLeft << 16) | (this.blackTimeLeft & 0xFFFF);
-        this.hasUndoneThisTurn = false;
-        System.out.println("[SYSTEM] Đã thực hiện Redo. Đã mở lại quyền Undo.");
+        this.undoCount++;
+        System.out.println("[SYSTEM] Đã thực hiện Redo.");
         view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
         view.updateBoardGUI();
         SaveLoadController.autoSave(currentTurn, board, secondsElapsed);
