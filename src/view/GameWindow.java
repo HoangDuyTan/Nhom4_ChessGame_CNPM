@@ -206,24 +206,28 @@ public class GameWindow extends JFrame {
         }
 
         // --- BẮT ĐẦU: GIAO DIỆN ĐỒNG HỒ ĐÔI ---
-        JPanel blackTimerPanel = new JPanel();
-        blackTimerPanel.setBackground(CONTROL_PANEL_BG);
-        blackTimerPanel.setBorder(BorderFactory.createTitledBorder("Thời gian ĐEN"));
-        blackTimerLabel = new JLabel("10:00");
-        blackTimerLabel.setFont(new Font("Consolas", Font.BOLD, 28));
-        blackTimerPanel.add(blackTimerLabel);
+        if (!playWithAI) {
+            JPanel blackTimerPanel = new JPanel();
+            blackTimerPanel.setBackground(CONTROL_PANEL_BG);
+            blackTimerPanel.setBorder(BorderFactory.createTitledBorder("Thời gian ĐEN"));
 
-        JPanel whiteTimerPanel = new JPanel();
-        whiteTimerPanel.setBackground(CONTROL_PANEL_BG);
-        whiteTimerPanel.setBorder(BorderFactory.createTitledBorder("Thời gian TRẮNG"));
-        whiteTimerLabel = new JLabel("10:00");
-        whiteTimerLabel.setFont(new Font("Consolas", Font.BOLD, 28));
-        whiteTimerPanel.add(whiteTimerLabel);
+            blackTimerLabel = new JLabel("10:00");
+            blackTimerLabel.setFont(new Font("Consolas", Font.BOLD, 28));
+            blackTimerPanel.add(blackTimerLabel);
 
-        rightPanel.add(blackTimerPanel);
-        rightPanel.add(Box.createVerticalStrut(15));
-        rightPanel.add(whiteTimerPanel);
-        rightPanel.add(Box.createVerticalStrut(20));
+            JPanel whiteTimerPanel = new JPanel();
+            whiteTimerPanel.setBackground(CONTROL_PANEL_BG);
+            whiteTimerPanel.setBorder(BorderFactory.createTitledBorder("Thời gian TRẮNG"));
+
+            whiteTimerLabel = new JLabel("10:00");
+            whiteTimerLabel.setFont(new Font("Consolas", Font.BOLD, 28));
+            whiteTimerPanel.add(whiteTimerLabel);
+
+            rightPanel.add(blackTimerPanel);
+            rightPanel.add(Box.createVerticalStrut(15));
+            rightPanel.add(whiteTimerPanel);
+            rightPanel.add(Box.createVerticalStrut(20));
+        }
         // --- KẾT THÚC: GIAO DIỆN ĐỒNG HỒ ĐÔI ---
 
         add(rightPanel, BorderLayout.EAST);
@@ -365,6 +369,9 @@ public class GameWindow extends JFrame {
     }
 
     public void updateTimer(int whiteSeconds, int blackSeconds, Color currentTurn) {
+        if (whiteTimerLabel == null || blackTimerLabel == null) {
+            return;
+        }
         int wMin = whiteSeconds / 60;
         int wSec = whiteSeconds % 60;
         whiteTimerLabel.setText(String.format("%02d:%02d", wMin, wSec));
