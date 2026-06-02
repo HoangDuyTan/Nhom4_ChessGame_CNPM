@@ -21,7 +21,7 @@ public class GameController {
     private GameWindow view;
     private Color currentTurn = Color.WHITE;
     private Position selectedPosition = null;
-
+    private List<MoveLog> moveHistory = new ArrayList<>();
     private Timer gameTimer;
     private int secondsElapsed = 0;
     private final int BASE_TIME = 600;
@@ -101,7 +101,9 @@ public class GameController {
     private void processMoveFrom(Position from, Position destination) {
         processMoveFrom(from, destination, null, true);
     }
-
+    public List<MoveLog> getMoveHistory() {
+        return moveHistory;
+    }
     private void processMoveFrom(Position from, Position destination, String promotionChoice, boolean showInvalidMessage) {
         if (from == null || destination == null || !from.isValid() || !destination.isValid()) {
             return;
@@ -114,6 +116,7 @@ public class GameController {
         if (moved) {
             SoundManager.playMove();
             MoveLog log = new MoveLog(from, destination, movingPiece, targetPiece, currentTurn);
+            moveHistory.add(log);
             System.out.println("[LỊCH SỬ NƯỚC ĐI] " + log.getStandardNotation());
             undoStack.push(stateBefore);
             redoStack.clear();
@@ -146,7 +149,7 @@ public class GameController {
             /* * [TRIGGER AUTO-SAVE]: Kích hoạt UC-04.1 (Tự động lưu ván đấu)
              * Chức năng: Đảm bảo tính bền vững dữ liệu ngay sau khi một nước đi hợp lệ được thực hiện xong.
              */
-            SaveLoadController.autoSave(currentTurn, board, secondsElapsed);
+            SaveLoadController.autoSave(currentTurn, secondsElapsed,moveHistory);
             selectedPosition = null;
             view.resetBoardColors();
             triggerAIMoveIfNeeded();
@@ -608,7 +611,7 @@ public class GameController {
         System.out.println("[SYSTEM] Đã thực hiện Undo.");
         view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
         view.updateBoardGUI();
-        SaveLoadController.autoSave(currentTurn, board, secondsElapsed);
+        SaveLoadController.autoSave(currentTurn,secondsElapsed,moveHistory);
     }
     public void redo() {
         if (isPaused || gameEnded || redoStack.isEmpty() || aiThinking) {
@@ -641,7 +644,7 @@ public class GameController {
         System.out.println("[SYSTEM] Đã thực hiện Redo.");
         view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
         view.updateBoardGUI();
-        SaveLoadController.autoSave(currentTurn, board, secondsElapsed);
+        SaveLoadController.autoSave(currentTurn, secondsElapsed,moveHistory);
     }
     public void restartGame() {
         this.board.reset();
@@ -662,5 +665,16 @@ public class GameController {
         view.updateBoardGUI();
         view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
         view.updatePauseButton(false);
+    }
+    public void replayMoveForLoad(Position from, Position to) {
+        GameState stateBefore = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
+        undoStack.push(stateBefore);
+        board.move(from, to);
+        currentTurn = (currentTurn == Color.WHITE) ? Color.BLACK : Color.WHITE;
+    }
+    public void clearHistory() {
+        undoStack.clear();
+        redoStack.clear();
+        moveHistory.clear();
     }
 }
