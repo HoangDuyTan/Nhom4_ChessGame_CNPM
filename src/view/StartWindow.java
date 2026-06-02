@@ -54,7 +54,7 @@ public class StartWindow extends JFrame {
         JButton startButton = new JButton("BẮT ĐẦU");
         styleButton(startButton);
         startButton.addActionListener(e -> {
-            if (SaveManager.hasSaveFile()) {
+            if (SaveManager.hasSaveFile(false)) {
                 Object[] options = {"Tiếp tục ván cũ", "Tạo ván mới", "Hủy"};
                 int n = JOptionPane.showOptionDialog(this,
                         "Bạn có một ván chơi chưa hoàn thành. Bạn muốn tiếp tục không?",
@@ -66,7 +66,7 @@ public class StartWindow extends JFrame {
                 if (n == JOptionPane.YES_OPTION) {
                     runGame(true);
                 } else if (n == JOptionPane.NO_OPTION) {
-                    SaveManager.deleteSaveFile();
+                    SaveManager.deleteSaveFile(false);
                     runGame(false);
                 }
             } else {
@@ -79,11 +79,21 @@ public class StartWindow extends JFrame {
         JButton aiButton = new JButton("CHƠI VỚI MÁY");
         styleButton(aiButton);
         aiButton.addActionListener(e -> {
-            SaveManager.deleteSaveFile();
-            new GameWindow(true);
-            dispose();
+            if (SaveManager.hasSaveFile(true)) {
+                Object[] options = {"Tiếp tục ván AI", "Tạo ván AI mới", "Hủy"};
+                int n = JOptionPane.showOptionDialog(this, "Bạn có một ván chơi với máy chưa hoàn thành.", "Thông báo",
+                        JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
+                if (n == JOptionPane.YES_OPTION) {
+                    runAIGame(true);
+                }
+                else if (n == JOptionPane.NO_OPTION) {
+                    SaveManager.deleteSaveFile(true);
+                    runAIGame(false);
+                }
+            } else {
+                runAIGame(false);
+            }
         });
-
         styleButton(guideButton);
         guideButton.addActionListener(e -> {
             JOptionPane.showMessageDialog(this,
@@ -151,7 +161,18 @@ public class StartWindow extends JFrame {
              */
             Board currentBoard = gameWindow.getBoard();
             GameController controller = gameWindow.getController();
-            SaveLoadController.loadGame(currentBoard, controller);
+            SaveLoadController.loadGame(currentBoard, controller,false);
+            gameWindow.updateBoardGUI();
+        }
+        gameWindow.setVisible(true);
+    }
+    private void runAIGame(boolean isResume) {
+        this.dispose();
+        GameWindow gameWindow = new GameWindow(true);
+        if (isResume) {
+            Board currentBoard = gameWindow.getBoard();
+            GameController controller = gameWindow.getController();
+            SaveLoadController.loadGame(currentBoard, controller, true);
             gameWindow.updateBoardGUI();
         }
         gameWindow.setVisible(true);

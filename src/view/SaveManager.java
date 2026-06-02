@@ -8,13 +8,14 @@ import java.util.List;
 
 public class SaveManager {
     private static final String SAVE_FILE = "savegame.txt";
-
+    private static final String SAVE_FILE_AI = "savegame_ai.txt";
     /**
      * Chức năng: Thực thi tuần tự hóa (Serialization) trạng thái game ra tệp tin cấu hình.
      * Ánh xạ các Use Case phân rã thành phần:
      */
-    public static void saveGameData(Color currentTurn, int secondsElapsed, List<MoveLog> moves) {
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(SAVE_FILE))) {
+    public static void saveGameData(Color currentTurn, int secondsElapsed, List<MoveLog> moves,boolean playWithAI) {
+        String saveFile = playWithAI ? SAVE_FILE_AI : SAVE_FILE;
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(saveFile))) {
             /* * MÃ USE CASE: UC-04.1.1 (Trích xuất lượt đi)
              * Chức năng: Đọc màu của lượt đi hiện tại từ Controller và chuyển đổi thành ký tự W hoặc B.
              */
@@ -42,8 +43,9 @@ public class SaveManager {
             e.printStackTrace();
         }
     }
-    public static SaveGameData loadGameData() {
-        try (BufferedReader br = new BufferedReader(new FileReader(SAVE_FILE)))
+    public static SaveGameData loadGameData(boolean playWithAI) {
+        String saveFile = playWithAI ? SAVE_FILE_AI : SAVE_FILE;
+        try (BufferedReader br = new BufferedReader(new FileReader(saveFile)))
         {
             SaveGameData data = new SaveGameData();
             String turn = br.readLine();
@@ -62,16 +64,18 @@ public class SaveManager {
         }
     }
 
-    public static boolean hasSaveFile() {
-        return new File(SAVE_FILE).exists();
+    public static boolean hasSaveFile(boolean playWithAI) {
+        String saveFile = playWithAI ? SAVE_FILE_AI : SAVE_FILE;
+        return new File(saveFile).exists();
     }
 
     /**
      * Chức năng: Xóa tệp dữ liệu lưu ván đấu.
      * Ánh xạ (SR3 của UC-07): Được gọi khi có người chơi đầu hàng để xóa trạng thái lưu cũ.
      */
-    public static void deleteSaveFile() {
-        File file = new File(SAVE_FILE);
+    public static void deleteSaveFile(boolean playWithAI) {
+        String saveFile = playWithAI ? SAVE_FILE_AI : SAVE_FILE;
+        File file = new File(saveFile);
         if (file.exists()) file.delete();
     }
 }

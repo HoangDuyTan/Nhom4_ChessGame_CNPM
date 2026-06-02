@@ -149,7 +149,7 @@ public class GameController {
             /* * [TRIGGER AUTO-SAVE]: Kích hoạt UC-04.1 (Tự động lưu ván đấu)
              * Chức năng: Đảm bảo tính bền vững dữ liệu ngay sau khi một nước đi hợp lệ được thực hiện xong.
              */
-            SaveLoadController.autoSave(currentTurn, secondsElapsed,moveHistory);
+            SaveLoadController.autoSave(currentTurn, secondsElapsed,moveHistory,playWithAI);
             selectedPosition = null;
             view.resetBoardColors();
             triggerAIMoveIfNeeded();
@@ -172,14 +172,14 @@ public class GameController {
         if (inCheck && !canMove) {
             gameEnded = true;
             gameTimer.stop();
-            SaveManager.deleteSaveFile();
+            SaveManager.deleteSaveFile(playWithAI);
             JOptionPane.showMessageDialog(view, "CHIẾU HẾT! " + (currentTurn == Color.WHITE ? "Trắng" : "Đen") + " thắng!");
         }
         // CHỨC NĂNG: UC-02.6.2: Stalemate (Hòa cờ) -> Đối phương không bị chiếu nhưng hết nước đi hợp lệ
         else if (!inCheck && !canMove) {
             gameEnded = true;
             gameTimer.stop();
-            SaveManager.deleteSaveFile();
+            SaveManager.deleteSaveFile(playWithAI);
             JOptionPane.showMessageDialog(view, "HÒA CỜ (Stalemate)!");
         }
         // CHỨC NĂNG: UC-02.6.1: Check (Chiếu tướng) -> Vua đối phương đang nằm trong tầm ngắm của địch
@@ -216,7 +216,7 @@ public class GameController {
         if (bestMove == null) {
             gameEnded = true;
             gameTimer.stop();
-            SaveManager.deleteSaveFile();
+            SaveManager.deleteSaveFile(playWithAI);
             return;
         }
 
@@ -365,7 +365,7 @@ public class GameController {
         gameEnded = true;
         gameTimer.stop();
 
-        SaveManager.deleteSaveFile();
+        SaveManager.deleteSaveFile(playWithAI);
 
         String winner = (loser == Color.WHITE) ? "Quân Đen" : "Quân Trắng";
         JOptionPane.showMessageDialog(view, "Hết giờ! " + winner + " giành chiến thắng.",
@@ -528,7 +528,7 @@ public class GameController {
              * SR3: Đảm bảo tính toàn vẹn dữ liệu.
              * File savegame.txt bị xóa ngay lập tức để trận đấu kết thúc hoàn toàn.
              */
-            SaveManager.deleteSaveFile();
+            SaveManager.deleteSaveFile(playWithAI);
 
             /*
              * (UC-07.5): Hệ thống bật pop-up thông báo tên người thắng cuộc kèm nguyên nhân kết thúc.
@@ -611,7 +611,7 @@ public class GameController {
         System.out.println("[SYSTEM] Đã thực hiện Undo.");
         view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
         view.updateBoardGUI();
-        SaveLoadController.autoSave(currentTurn,secondsElapsed,moveHistory);
+        SaveLoadController.autoSave(currentTurn,secondsElapsed,moveHistory,playWithAI);
     }
     public void redo() {
         if (isPaused || gameEnded || redoStack.isEmpty() || aiThinking) {
@@ -644,7 +644,7 @@ public class GameController {
         System.out.println("[SYSTEM] Đã thực hiện Redo.");
         view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
         view.updateBoardGUI();
-        SaveLoadController.autoSave(currentTurn, secondsElapsed,moveHistory);
+        SaveLoadController.autoSave(currentTurn, secondsElapsed,moveHistory,playWithAI);
     }
     public void restartGame() {
         this.board.reset();
