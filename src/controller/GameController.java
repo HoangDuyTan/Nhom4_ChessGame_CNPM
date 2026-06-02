@@ -452,9 +452,11 @@ public class GameController {
         }
 
         view.resetBoardColors();
+
         if (!GameConfig.isAdvancedMode()) {
-            view.highlightValidMoves(from, board);
+            view.highlightValidMoves(position, board);
         }
+
         return true;
     }
 
