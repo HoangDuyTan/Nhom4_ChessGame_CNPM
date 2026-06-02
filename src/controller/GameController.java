@@ -4,9 +4,7 @@ import model.*;
 import model.GameState;
 import model.Piece;
 import model.Position;
-import view.GameWindow;
-import view.SaveManager;
-import view.SoundManager;
+import view.*;
 
 import javax.swing.JOptionPane;
 import java.awt.Color;
@@ -69,7 +67,9 @@ public class GameController {
              * CHỨC NĂNG: UC-02.3: Check Available Move (Kiểm tra nước đi có sẵn)
              * Mô tả: Hệ thống tự động tính toán luật đi của quân cờ để highlight các ô đích khả dụng.
              */
-            view.highlightValidMoves(clicked, board);
+            if (!GameConfig.isAdvancedMode()) {
+                view.highlightValidMoves(clicked, board);
+            }
         }
 
     }
@@ -85,7 +85,9 @@ public class GameController {
         } else if (pieceAtClicked != null && pieceAtClicked.getColor() == currentTurn) {
             selectedPosition = clicked;
             view.resetBoardColors();
-            view.highlightValidMoves(clicked, board);
+            if (!GameConfig.isAdvancedMode()) {
+                view.highlightValidMoves(clicked, board);
+            }
         } else {
             processMove(clicked);
         }
@@ -175,18 +177,24 @@ public class GameController {
             gameEnded = true;
             gameTimer.stop();
             SaveManager.deleteSaveFile(playWithAI);
-            JOptionPane.showMessageDialog(view, "CHIẾU HẾT! " + (currentTurn == Color.WHITE ? "Trắng" : "Đen") + " thắng!");
+            String winner = (currentTurn == Color.WHITE) ? "Trắng" : "Đen";
+            showGameOverDialog( "CHIẾU HẾT!\n" + winner + " thắng!"
+            );
         }
         // CHỨC NĂNG: UC-02.6.2: Stalemate (Hòa cờ) -> Đối phương không bị chiếu nhưng hết nước đi hợp lệ
         else if (!inCheck && !canMove) {
             gameEnded = true;
             gameTimer.stop();
             SaveManager.deleteSaveFile(playWithAI);
-            JOptionPane.showMessageDialog(view, "HÒA CỜ (Stalemate)!");
+            showGameOverDialog(
+                    "HÒA CỜ (Stalemate)!"
+            );
         }
         // CHỨC NĂNG: UC-02.6.1: Check (Chiếu tướng) -> Vua đối phương đang nằm trong tầm ngắm của địch
         else if (inCheck) {
-            JOptionPane.showMessageDialog(view, "Đang bị CHIẾU!");
+            if (!playWithAI || opponentColor != aiColor) {
+                JOptionPane.showMessageDialog(view, "Đang bị CHIẾU!");
+            }
         }
     }
 
@@ -369,8 +377,8 @@ public class GameController {
         SaveManager.deleteSaveFile(playWithAI);
 
         String winner = (loser == Color.WHITE) ? "Quân Đen" : "Quân Trắng";
-        JOptionPane.showMessageDialog(view, "Hết giờ! " + winner + " giành chiến thắng.",
-                "Kết thúc ván đấu", JOptionPane.INFORMATION_MESSAGE);
+        showGameOverDialog( "Hết giờ!\n" + winner + " giành chiến thắng."
+        );
     }
 
     /**
@@ -444,7 +452,9 @@ public class GameController {
         }
 
         view.resetBoardColors();
-        view.highlightValidMoves(position, board);
+        if (!GameConfig.isAdvancedMode()) {
+            view.highlightValidMoves(from, board);
+        }
         return true;
     }
 
@@ -529,10 +539,7 @@ public class GameController {
              * (UC-07.5): Hệ thống bật pop-up thông báo tên người thắng cuộc kèm nguyên nhân kết thúc.
              * Ghi chú (UC-07.6): Sau khi bấm OK, bàn đấu giữ nguyên trạng thái đóng băng để người chơi nhìn lại, người chơi có thể tự thao tác "Quay lại Menu" hoặc "Chơi Game Mới" thông qua Menu điều khiển.
              */
-            JOptionPane.showMessageDialog(
-                    view,
-                    winner + " thắng do đối thủ đầu hàng!"
-            );
+            showGameOverDialog( winner + " thắng do đối thủ đầu hàng!" );
 
             /*
              * Luồng thay thế A1 (UC-07.7) & A2:
@@ -671,5 +678,30 @@ public class GameController {
         undoStack.clear();
         redoStack.clear();
         moveHistory.clear();
+    }
+    private void showGameOverDialog(String message) {
+
+        String[] options = {
+                "Chơi Ván Mới",
+                "Quay Lại Menu"
+        };
+
+        int choice = JOptionPane.showOptionDialog(
+                view,
+                message,
+                "Kết thúc ván đấu",
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.INFORMATION_MESSAGE,
+                null,
+                options,
+                options[0]
+        );
+
+        if (choice == 0) {
+            restartGame();
+        } else if (choice == 1) {
+            view.dispose();
+            new StartWindow();
+        }
     }
 }

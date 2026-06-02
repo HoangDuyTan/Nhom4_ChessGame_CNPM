@@ -13,6 +13,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
 import java.io.File;
+import java.util.ArrayList;
 
 public class GameWindow extends JFrame {
     private Board board;
@@ -36,6 +37,11 @@ public class GameWindow extends JFrame {
     private JPanel boardPanel;
     private Position dragStartPosition;
     private boolean draggingPiece;
+    private JPanel rightPanel;
+    private JPanel rowLabels;
+    private JPanel colLabels;
+    private JLabel titleLabel;
+    private java.util.List<JButton> controlButtons = new ArrayList<>();
 
     public GameWindow() {
         this(false);
@@ -81,7 +87,7 @@ public class GameWindow extends JFrame {
         }
 
         boardPanel.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 3));
-        JPanel rowLabels = new JPanel(new GridLayout(8, 1));
+        rowLabels = new JPanel(new GridLayout(8, 1));
         rowLabels.setBackground(CONTROL_PANEL_BG);
         rowLabels.setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 5));
         Font labelFont = new Font("Arial", Font.BOLD, 16);
@@ -92,7 +98,7 @@ public class GameWindow extends JFrame {
             label.setForeground(BORDER_COLOR);
             rowLabels.add(label);
         }
-        JPanel colLabels = new JPanel(new GridLayout(1, 8));
+        colLabels = new JPanel(new GridLayout(1, 8));
         colLabels.setBackground(CONTROL_PANEL_BG);
         colLabels.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
 
@@ -131,13 +137,13 @@ public class GameWindow extends JFrame {
         layeredPane.add(pauseOverlay, JLayeredPane.PALETTE_LAYER);
         add(layeredPane, BorderLayout.CENTER);
 
-        JPanel rightPanel = new JPanel();
+        rightPanel = new JPanel();
         rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
         rightPanel.setBackground(CONTROL_PANEL_BG);
         rightPanel.setBorder(BorderFactory.createEmptyBorder(20, 10, 20, 20));
         rightPanel.setPreferredSize(new Dimension(220, 0));
 
-        JLabel titleLabel = new JLabel("CHỨC NĂNG");
+        titleLabel = new JLabel("CHỨC NĂNG");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 20));
         titleLabel.setAlignmentX(CENTER_ALIGNMENT);
         rightPanel.add(titleLabel);
@@ -146,6 +152,7 @@ public class GameWindow extends JFrame {
         String[] buttonNames = {"Quay Lại Menu", "Đi Lại", "Đi Tiếp", "Tạm Dừng", "Đầu Hàng", "Chơi Game Mới", "Cài Đặt"};
         for (String name : buttonNames) {
             JButton btn = new JButton(name);
+            controlButtons.add(btn);
             btn.setFont(new Font("Arial", Font.PLAIN, 16));
             btn.setMaximumSize(new Dimension(190, 45));
             btn.setBackground(BUTTON_COLOR);
@@ -206,24 +213,28 @@ public class GameWindow extends JFrame {
         }
 
         // --- BẮT ĐẦU: GIAO DIỆN ĐỒNG HỒ ĐÔI ---
-        JPanel blackTimerPanel = new JPanel();
-        blackTimerPanel.setBackground(CONTROL_PANEL_BG);
-        blackTimerPanel.setBorder(BorderFactory.createTitledBorder("Thời gian ĐEN"));
-        blackTimerLabel = new JLabel("10:00");
-        blackTimerLabel.setFont(new Font("Consolas", Font.BOLD, 28));
-        blackTimerPanel.add(blackTimerLabel);
+        if (!playWithAI) {
+            JPanel blackTimerPanel = new JPanel();
+            blackTimerPanel.setBackground(CONTROL_PANEL_BG);
+            blackTimerPanel.setBorder(BorderFactory.createTitledBorder("Thời gian ĐEN"));
 
-        JPanel whiteTimerPanel = new JPanel();
-        whiteTimerPanel.setBackground(CONTROL_PANEL_BG);
-        whiteTimerPanel.setBorder(BorderFactory.createTitledBorder("Thời gian TRẮNG"));
-        whiteTimerLabel = new JLabel("10:00");
-        whiteTimerLabel.setFont(new Font("Consolas", Font.BOLD, 28));
-        whiteTimerPanel.add(whiteTimerLabel);
+            blackTimerLabel = new JLabel("10:00");
+            blackTimerLabel.setFont(new Font("Consolas", Font.BOLD, 28));
+            blackTimerPanel.add(blackTimerLabel);
 
-        rightPanel.add(blackTimerPanel);
-        rightPanel.add(Box.createVerticalStrut(15));
-        rightPanel.add(whiteTimerPanel);
-        rightPanel.add(Box.createVerticalStrut(20));
+            JPanel whiteTimerPanel = new JPanel();
+            whiteTimerPanel.setBackground(CONTROL_PANEL_BG);
+            whiteTimerPanel.setBorder(BorderFactory.createTitledBorder("Thời gian TRẮNG"));
+
+            whiteTimerLabel = new JLabel("10:00");
+            whiteTimerLabel.setFont(new Font("Consolas", Font.BOLD, 28));
+            whiteTimerPanel.add(whiteTimerLabel);
+
+            rightPanel.add(blackTimerPanel);
+            rightPanel.add(Box.createVerticalStrut(15));
+            rightPanel.add(whiteTimerPanel);
+            rightPanel.add(Box.createVerticalStrut(20));
+        }
         // --- KẾT THÚC: GIAO DIỆN ĐỒNG HỒ ĐÔI ---
 
         add(rightPanel, BorderLayout.EAST);
@@ -362,6 +373,9 @@ public class GameWindow extends JFrame {
     }
 
     public void updateTimer(int whiteSeconds, int blackSeconds, Color currentTurn) {
+        if (whiteTimerLabel == null || blackTimerLabel == null) {
+            return;
+        }
         int wMin = whiteSeconds / 60;
         int wSec = whiteSeconds % 60;
         whiteTimerLabel.setText(String.format("%02d:%02d", wMin, wSec));
@@ -405,5 +419,30 @@ public class GameWindow extends JFrame {
 
     public GameController getController() {
         return controller;
+    }
+    public void refreshTheme() {
+
+        DARK_SQUARE_COLOR = Theme.DARK_SQUARE_COLOR;
+        LIGHT_SQUARE_COLOR = Theme.LIGHT_SQUARE_COLOR;
+        BORDER_COLOR = Theme.BORDER_COLOR;
+        CONTROL_PANEL_BG = Theme.CONTROL_PANEL_BG;
+        BUTTON_COLOR = Theme.BUTTON_COLOR;
+
+        resetBoardColors();
+
+        boardPanel.setBorder( BorderFactory.createLineBorder(BORDER_COLOR, 3) );
+
+        rightPanel.setBackground(CONTROL_PANEL_BG);
+        rowLabels.setBackground(CONTROL_PANEL_BG);
+        colLabels.setBackground(CONTROL_PANEL_BG);
+        titleLabel.setForeground(BORDER_COLOR);
+
+        for (JButton btn : controlButtons) {
+            btn.setBackground(BUTTON_COLOR);
+            btn.setForeground(Color.WHITE);
+        }
+
+        repaint();
+        revalidate();
     }
 }
