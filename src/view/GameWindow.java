@@ -339,17 +339,14 @@ public class GameWindow extends JFrame {
         for (int r = 0; r < 8; r++) {
             for (int c = 0; c < 8; c++) {
                 Position to = new Position(r, c);
-                if (piece.isValidMove(from, to, board)) {
-                    if (!board.simulateMoveAndCheck(from, to, piece.getColor())) {
-                        Piece targetPiece = board.get(to);
-                        if (targetPiece instanceof King) continue;
-                        if (targetPiece != null) {
-                            chessSquares[r][c].setBackground(CAPTURE_COLOR);
-                        } else {
-                            chessSquares[r][c].setBackground(MOVE_COLOR);
-                        }
-                        chessSquares[r][c].setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
+                if (board.isLegalMove(from, to)) {
+                    Piece targetPiece = board.get(to);
+                    if (targetPiece != null) {
+                        chessSquares[r][c].setBackground(CAPTURE_COLOR);
+                    } else {
+                        chessSquares[r][c].setBackground(MOVE_COLOR);
                     }
+                    chessSquares[r][c].setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
                 }
             }
         }

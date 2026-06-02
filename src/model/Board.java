@@ -66,16 +66,14 @@ public class Board {
     }
 
     public boolean move(Position from, Position to, String promotionChoice) {
-        Piece piece = get(from);
-        if (piece == null) return false;
-        if (!piece.isValidMove(from, to, this)) return false;
-        /**
-         * Giai đoạn 2: UC-02.4: Check King Safety (Kiểm tra an toàn của Vua)
-         * Chạy thử nước đi, nếu hành động này khiến Vua tự rơi vào thế bị chiếu -> Báo lỗi nước đi.
-         */
-        if (simulateMoveAndCheck(from, to, piece.getColor())) {
+        if (from == null || to == null || !from.isValid() || !to.isValid()) {
             return false;
         }
+
+        Piece piece = get(from);
+        if (piece == null) return false;
+        if (!isLegalMove(from, to, piece)) return false;
+        boolean castlingMove = isCastlingMove(piece, from, to);
         /**
          * CHỨC NĂNG CHI TIẾT: UC-02.1.4: En passant (Bắt tốt qua đường)
          * Nhánh xử lý: Ăn quân Tốt địch đứng ngang hàng khi quân đó vừa nhảy bước đôi từ vị trí xuất phát.
@@ -90,19 +88,8 @@ public class Board {
          * CHỨC NĂNG CHI TIẾT: UC-02.1.2: Castling (Nhập thành)
          * Nhánh xử lý: Vua di chuyển 2 ô sang ngang và hoán đổi vị trí phòng thủ an toàn cùng quân Xe.
          */
-        if (piece instanceof King && Math.abs(to.getC() - from.getC()) == 2) {
-            if (to.getC() > from.getC()) {
-                Piece rook = grid[from.getR()][7];
-                grid[from.getR()][5] = rook;
-                grid[from.getR()][7] = null;
-                rook.setMoved(true);
-            }
-            else {
-                Piece rook = grid[from.getR()][0];
-                grid[from.getR()][3] = rook;
-                grid[from.getR()][0] = null;
-                rook.setMoved(true);
-            }
+        if (castlingMove) {
+            moveCastlingRook(from, to);
         }
         /**
          * CHỨC NĂNG CHI TIẾT: UC-02.1.1: Capture (Ăn quân thông thường) & Di chuyển ô trống
@@ -159,6 +146,43 @@ public class Board {
             }
         }
         return true;
+    }
+
+    public boolean isLegalMove(Position from, Position to) {
+        if (from == null || to == null || !from.isValid() || !to.isValid()) {
+            return false;
+        }
+
+        Piece piece = get(from);
+        return isLegalMove(from, to, piece);
+    }
+
+    private boolean isLegalMove(Position from, Position to, Piece piece) {
+        if (piece == null || !piece.isValidMove(from, to, this)) {
+            return false;
+        }
+
+        Piece target = get(to);
+        if (target instanceof King) {
+            return false;
+        }
+
+        return isCastlingMove(piece, from, to) || !simulateMoveAndCheck(from, to, piece.getColor());
+    }
+
+    private boolean isCastlingMove(Piece piece, Position from, Position to) {
+        return piece instanceof King
+                && from.getR() == to.getR()
+                && Math.abs(to.getC() - from.getC()) == 2;
+    }
+
+    private void moveCastlingRook(Position from, Position to) {
+        int rookFromCol = to.getC() > from.getC() ? 7 : 0;
+        int rookToCol = to.getC() > from.getC() ? 5 : 3;
+        Piece rook = grid[from.getR()][rookFromCol];
+        grid[from.getR()][rookToCol] = rook;
+        grid[from.getR()][rookFromCol] = null;
+        rook.setMoved(true);
     }
 
     public boolean canCastle(Position from, Position to, Color color) {
@@ -302,7 +326,7 @@ public class Board {
                     for (int r2 = 0; r2 < 8; r2++) {
                         for (int c2 = 0; c2 < 8; c2++) {
                             Position to = new Position(r2, c2);
-                            if (p.isValidMove(from, to, this) && !simulateMoveAndCheck(from, to, color)) {
+                            if (isLegalMove(from, to)) {
                                 return true;
                             }
                         }

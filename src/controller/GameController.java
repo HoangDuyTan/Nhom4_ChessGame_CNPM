@@ -252,8 +252,7 @@ public class GameController {
                 for (int toRow = 0; toRow < 8; toRow++) {
                     for (int toCol = 0; toCol < 8; toCol++) {
                         Position to = new Position(toRow, toCol);
-                        if (piece.isValidMove(from, to, board)
-                                && !board.simulateMoveAndCheck(from, to, color)) {
+                        if (board.isLegalMove(from, to)) {
                             moves.add(new AIMove(from, to));
                         }
                     }
