@@ -31,6 +31,9 @@ public class Board {
     }
 
     public void init() {
+        clear();
+        enPassantTarget = null;
+
         grid[0][0] = new Rook(Color.WHITE);
         grid[0][1] = new Knight(Color.WHITE);
         grid[0][2] = new Bishop(Color.WHITE);
@@ -78,11 +81,9 @@ public class Board {
          * CHỨC NĂNG CHI TIẾT: UC-02.1.4: En passant (Bắt tốt qua đường)
          * Nhánh xử lý: Ăn quân Tốt địch đứng ngang hàng khi quân đó vừa nhảy bước đôi từ vị trí xuất phát.
          */
-        if (piece instanceof Pawn) {
-            if (enPassantTarget != null && to.equals(enPassantTarget) && from.getC() != to.getC() && get(to) == null) {
-                int capturedPawnRow = (piece.getColor() == Color.WHITE) ? to.getR() - 1 : to.getR() + 1;
-                grid[capturedPawnRow][to.getC()] = null;
-            }
+        if (isEnPassantMove(from, to, piece)) {
+            Position capturedPawnPosition = getEnPassantCapturedPawnPosition(to, piece.getColor());
+            grid[capturedPawnPosition.getR()][capturedPawnPosition.getC()] = null;
         }
         /**
          * CHỨC NĂNG CHI TIẾT: UC-02.1.2: Castling (Nhập thành)
@@ -221,6 +222,10 @@ public class Board {
     }
 
     public boolean canCaptureEnPassant(Position from, Position to, Color color) {
+        if (from == null || to == null || color == null || !from.isValid() || !to.isValid()) {
+            return false;
+        }
+
         if (enPassantTarget == null || !enPassantTarget.equals(to) || get(to) != null) {
             return false;
         }
@@ -237,6 +242,25 @@ public class Board {
 
         Piece capturedPawn = get(capturedPawnPosition);
         return capturedPawn instanceof Pawn && capturedPawn.getColor() != color;
+    }
+
+    public Piece getCapturedPiece(Position from, Position to) {
+        if (from == null || to == null || !from.isValid() || !to.isValid()) {
+            return null;
+        }
+
+        Piece target = get(to);
+        if (target != null) {
+            return target;
+        }
+
+        Piece movingPiece = get(from);
+        if (!isEnPassantMove(from, to, movingPiece)) {
+            return null;
+        }
+
+        Position capturedPawnPosition = getEnPassantCapturedPawnPosition(to, movingPiece.getColor());
+        return get(capturedPawnPosition);
     }
 
     public Position findKing(Color color) {
@@ -295,8 +319,8 @@ public class Board {
         Piece originalTo = grid[to.getR()][to.getC()];
         Position enPassantCapturedPawnPosition = null;
         Piece enPassantCapturedPawn = null;
-        if (originalFrom instanceof Pawn && canCaptureEnPassant(from, to, color)) {
-            enPassantCapturedPawnPosition = getEnPassantCapturedPawnPosition(to, color);
+        if (isEnPassantMove(from, to, originalFrom)) {
+            enPassantCapturedPawnPosition = getEnPassantCapturedPawnPosition(to, originalFrom.getColor());
             enPassantCapturedPawn = grid[enPassantCapturedPawnPosition.getR()][enPassantCapturedPawnPosition.getC()];
             grid[enPassantCapturedPawnPosition.getR()][enPassantCapturedPawnPosition.getC()] = null;
         }
@@ -310,6 +334,10 @@ public class Board {
             grid[enPassantCapturedPawnPosition.getR()][enPassantCapturedPawnPosition.getC()] = enPassantCapturedPawn;
         }
         return check;
+    }
+
+    private boolean isEnPassantMove(Position from, Position to, Piece piece) {
+        return piece instanceof Pawn && canCaptureEnPassant(from, to, piece.getColor());
     }
 
     private Position getEnPassantCapturedPawnPosition(Position to, Color movingColor) {
@@ -342,11 +370,8 @@ public class Board {
      * và phân biệt chữ hoa/thường để khởi tạo lại chính xác các đối tượng Piece (King, Queen, Rook...).
      */
     public void loadGame(String[] rows) {
-        for (int r = 0; r < 8; r++) {
-            for (int c = 0; c < 8; c++) {
-                grid[r][c] = null;
-            }
-        }
+        clear();
+        enPassantTarget = null;
 
         for (int r = 0; r < 8; r++) {
             String row = rows[r];
@@ -385,12 +410,14 @@ public class Board {
         }
     }
     public void reset() {
+        init();
+    }
+
+    private void clear() {
         for (int r = 0; r < 8; r++) {
             for (int c = 0; c < 8; c++) {
                 grid[r][c] = null;
             }
         }
-        this.enPassantTarget = null;
-        init();
     }
 }
