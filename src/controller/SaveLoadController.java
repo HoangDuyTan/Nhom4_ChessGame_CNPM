@@ -20,6 +20,7 @@ public class SaveLoadController {
             Position from = new Position(Integer.parseInt(p[0]), Integer.parseInt(p[1]));
             Position to = new Position(Integer.parseInt(p[2]), Integer.parseInt(p[3]));
             controller.replayMoveForLoad(from, to);
+            controller.getMoveHistory().add(new MoveLog(from, to, null, null, Color.WHITE));
         }
         controller.setCurrentTurn(data.getTurn());
         controller.setSecondsElapsed(data.getSecondsElapsed());
