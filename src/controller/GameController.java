@@ -113,7 +113,7 @@ public class GameController {
 
         GameState stateBefore = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
         Piece movingPiece = board.get(from);
-        Piece targetPiece = board.get(destination);
+        Piece targetPiece = board.getCapturedPiece(from, destination);
         boolean moved = board.move(from, destination, promotionChoice);
         if (moved) {
             SoundManager.playMove();
@@ -276,16 +276,11 @@ public class GameController {
         Position from = move.getFrom();
         Position to = move.getTo();
         Piece movingPiece = board.get(from);
-        Piece capturedPiece = board.get(to);
+        Piece capturedPiece = board.getCapturedPiece(from, to);
         int score = random.nextInt(7);
 
         if (capturedPiece != null) {
             score += pieceValue(capturedPiece) * 10 - pieceValue(movingPiece);
-        } else if (movingPiece instanceof Pawn
-                && board.getEnPassantTarget() != null
-                && board.getEnPassantTarget().equals(to)
-                && from.getC() != to.getC()) {
-            score += pieceValue(new Pawn(currentTurn)) * 10;
         }
 
         if (movingPiece instanceof Pawn && (to.getR() == 0 || to.getR() == 7)) {
