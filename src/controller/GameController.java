@@ -32,6 +32,7 @@ public class GameController {
     private boolean gameEnded = false;
     private Stack<GameState> undoStack = new Stack<>();
     private Stack<GameState> redoStack = new Stack<>();
+    private Stack<MoveLog> redoMoveHistory = new Stack<>();
     private boolean playWithAI = false;
     private final Color aiColor = Color.BLACK;
     private boolean aiThinking = false;
@@ -122,6 +123,7 @@ public class GameController {
             System.out.println("[LỊCH SỬ NƯỚC ĐI] " + log.getStandardNotation());
             undoStack.push(stateBefore);
             redoStack.clear();
+            redoMoveHistory.clear();
             this.undoCount = 0;
             view.updateBoardGUI();
             checkGameState();
@@ -590,12 +592,21 @@ public class GameController {
             GameState aiState = undoStack.pop();
             redoStack.push(aiState);
             GameState playersPreviousState = undoStack.pop();
+            if (!moveHistory.isEmpty()) {
+                redoMoveHistory.push(moveHistory.remove(moveHistory.size() - 1));
+            }
+            if (!moveHistory.isEmpty()) {
+                redoMoveHistory.push(moveHistory.remove(moveHistory.size() - 1));
+            }
             playersPreviousState.restore(board);
 
             this.currentTurn = playersPreviousState.getTurn();
             this.whiteTimeLeft = playersPreviousState.getWhiteTimeLeft();
             this.blackTimeLeft = playersPreviousState.getBlackTimeLeft();
         } else {
+            if (!moveHistory.isEmpty()) {
+                redoMoveHistory.push(moveHistory.remove(moveHistory.size() - 1));
+            }
             GameState previousState = undoStack.pop();
             previousState.restore(board);
 
@@ -628,12 +639,21 @@ public class GameController {
             undoStack.push(redoStack.pop());
             GameState aiNextState = redoStack.pop();
             aiNextState.restore(board);
+            if (!redoMoveHistory.isEmpty()) {
+                moveHistory.add(redoMoveHistory.pop());
+            }
+            if (!redoMoveHistory.isEmpty()) {
+                moveHistory.add(redoMoveHistory.pop());
+            }
             this.currentTurn = aiNextState.getTurn();
             this.whiteTimeLeft = aiNextState.getWhiteTimeLeft();
             this.blackTimeLeft = aiNextState.getBlackTimeLeft();
         } else {
             GameState nextState = redoStack.pop();
             nextState.restore(board);
+            if (!redoMoveHistory.isEmpty()) {
+                moveHistory.add(redoMoveHistory.pop());
+            }
             this.currentTurn = nextState.getTurn();
             this.whiteTimeLeft = nextState.getWhiteTimeLeft();
             this.blackTimeLeft = nextState.getBlackTimeLeft();
@@ -660,6 +680,8 @@ public class GameController {
         startTimer();
         undoStack.clear();
         redoStack.clear();
+        redoMoveHistory.clear();
+        moveHistory.clear();
         view.resetBoardColors();
         view.updateBoardGUI();
         view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
@@ -674,6 +696,7 @@ public class GameController {
     public void clearHistory() {
         undoStack.clear();
         redoStack.clear();
+        redoMoveHistory.clear();
         moveHistory.clear();
     }
     private void showGameOverDialog(String message) {
