@@ -19,8 +19,9 @@ public class SaveLoadController {
             String[] p = moveLine.split(",");
             Position from = new Position(Integer.parseInt(p[0]), Integer.parseInt(p[1]));
             Position to = new Position(Integer.parseInt(p[2]), Integer.parseInt(p[3]));
-            controller.replayMoveForLoad(from, to);
-            controller.getMoveHistory().add(new MoveLog(from, to, null, null, Color.WHITE));
+            String promotionChoice = p.length > 4 ? Board.normalizePromotionChoice(p[4]) : null;
+            controller.replayMoveForLoad(from, to, promotionChoice);
+            controller.getMoveHistory().add(new MoveLog(from, to, null, null, Color.WHITE, promotionChoice));
         }
         controller.setCurrentTurn(data.getTurn());
         controller.setSecondsElapsed(data.getSecondsElapsed());

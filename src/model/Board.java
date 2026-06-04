@@ -1,10 +1,11 @@
 package model;
 
-import javax.swing.*;
 import java.awt.Color;
-import java.awt.GraphicsEnvironment;
 
 public class Board {
+    public static final String DEFAULT_PROMOTION_CHOICE = "Queen";
+    public static final String[] PROMOTION_CHOICES = {"Queen", "Rook", "Bishop", "Knight"};
+
     private Piece[][] grid = new Piece[8][8];
     private Position enPassantTarget = null;
 
@@ -106,47 +107,60 @@ public class Board {
         }
         /**
          * CHỨC NĂNG CHI TIẾT: UC-02.1.3: Pawn promotion (Phong cấp tốt)
-         * Nhánh xử lý: Khi quân Tốt tiến đến hàng cuối cùng (Hàng 7 của Trắng, Hàng 0 của Đen).
          */
         if (piece instanceof Pawn) {
-            boolean promote = (piece.getColor() == Color.WHITE && to.getR() == 7) || (piece.getColor() == Color.BLACK && to.getR() == 0);
-            if (promote) {
-                String[] options = {"Queen", "Rook", "Bishop", "Knight"};
-                String choice = promotionChoice;
-                if (choice == null && !GraphicsEnvironment.isHeadless()) {
-                    choice = (String) JOptionPane.showInputDialog(
-                        null,
-                        "Chọn quân để phong cấp:",
-                        "Pawn Promotion",
-                        JOptionPane.QUESTION_MESSAGE,
-                        null,
-                        options,
-                            options[0]
-                    );
-                }
-                if (choice == null) {
-                    choice = "Queen";
-                }
-                Color color = piece.getColor();
-                Piece promotedPiece;
-                switch (choice) {
-                    case "Rook":
-                        promotedPiece = new Rook(color);
-                        break;
-                    case "Bishop":
-                        promotedPiece = new Bishop(color);
-                        break;
-                    case "Knight":
-                        promotedPiece = new Knight(color);
-                        break;
-                    default:
-                        promotedPiece = new Queen(color);
-                }
-                promotedPiece.setMoved(true);
-                grid[to.getR()][to.getC()] = promotedPiece;
+            if (isPromotionRank(piece, to)) {
+                grid[to.getR()][to.getC()] = createPromotedPiece(piece.getColor(), promotionChoice);
             }
         }
         return true;
+    }
+
+    public boolean isPromotionMove(Position from, Position to) {
+        if (from == null || to == null || !from.isValid() || !to.isValid()) {
+            return false;
+        }
+
+        Piece piece = get(from);
+        return piece instanceof Pawn && isPromotionRank(piece, to) && isLegalMove(from, to, piece);
+    }
+
+    public Piece createPromotedPiece(Color color, String promotionChoice) {
+        Piece promotedPiece;
+        switch (normalizePromotionChoice(promotionChoice)) {
+            case "Rook":
+                promotedPiece = new Rook(color);
+                break;
+            case "Bishop":
+                promotedPiece = new Bishop(color);
+                break;
+            case "Knight":
+                promotedPiece = new Knight(color);
+                break;
+            default:
+                promotedPiece = new Queen(color);
+                break;
+        }
+        promotedPiece.setMoved(true);
+        return promotedPiece;
+    }
+
+    public static String normalizePromotionChoice(String promotionChoice) {
+        if (promotionChoice == null) {
+            return DEFAULT_PROMOTION_CHOICE;
+        }
+
+        for (String choice : PROMOTION_CHOICES) {
+            if (choice.equalsIgnoreCase(promotionChoice.trim())) {
+                return choice;
+            }
+        }
+        return DEFAULT_PROMOTION_CHOICE;
+    }
+
+    private boolean isPromotionRank(Piece piece, Position to) {
+        return (piece.getColor() == Color.WHITE && to.getR() == 7)
+                || (piece.getColor() == Color.BLACK && to.getR() == 0);
     }
 
     public boolean isLegalMove(Position from, Position to) {
