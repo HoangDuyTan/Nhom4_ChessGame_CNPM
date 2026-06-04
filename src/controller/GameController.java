@@ -8,6 +8,7 @@ import view.*;
 
 import javax.swing.JOptionPane;
 import java.awt.Color;
+import java.awt.GraphicsEnvironment;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -115,10 +116,14 @@ public class GameController {
         GameState stateBefore = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
         Piece movingPiece = board.get(from);
         Piece targetPiece = board.getCapturedPiece(from, destination);
-        boolean moved = board.move(from, destination, promotionChoice);
+        boolean promotionMove = board.isPromotionMove(from, destination);
+        String resolvedPromotionChoice = promotionMove
+                ? resolvePromotionChoice(promotionChoice)
+                : null;
+        boolean moved = board.move(from, destination, resolvedPromotionChoice);
         if (moved) {
             SoundManager.playMove();
-            MoveLog log = new MoveLog(from, destination, movingPiece, targetPiece, currentTurn);
+            MoveLog log = new MoveLog(from, destination, movingPiece, targetPiece, currentTurn, resolvedPromotionChoice);
             moveHistory.add(log);
             System.out.println("[LỊCH SỬ NƯỚC ĐI] " + log.getStandardNotation());
             undoStack.push(stateBefore);
@@ -166,6 +171,24 @@ public class GameController {
         }
         return false;
     }
+
+    private String resolvePromotionChoice(String promotionChoice) {
+        if (promotionChoice != null || GraphicsEnvironment.isHeadless()) {
+            return Board.normalizePromotionChoice(promotionChoice);
+        }
+
+        String choice = (String) JOptionPane.showInputDialog(
+                view,
+                "Chon quan de phong cap:",
+                "Pawn Promotion",
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                Board.PROMOTION_CHOICES,
+                Board.DEFAULT_PROMOTION_CHOICE
+        );
+        return Board.normalizePromotionChoice(choice);
+    }
+
     /**
      * CHỨC NĂNG: UC-02.6: Update Game State (Cập nhật trạng thái trận đấu)
      * Mô tả: Đánh giá cục diện bàn cờ để phát hiện kịp thời các điều kiện kết thúc game.
@@ -688,9 +711,13 @@ public class GameController {
         view.updatePauseButton(false);
     }
     public void replayMoveForLoad(Position from, Position to) {
+        replayMoveForLoad(from, to, null);
+    }
+
+    public void replayMoveForLoad(Position from, Position to, String promotionChoice) {
         GameState stateBefore = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
         undoStack.push(stateBefore);
-        board.move(from, to);
+        board.move(from, to, promotionChoice);
         currentTurn = (currentTurn == Color.WHITE) ? Color.BLACK : Color.WHITE;
     }
     public void clearHistory() {

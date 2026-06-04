@@ -33,6 +33,9 @@ public class SaveManager {
                 Position from = move.getFrom();
                 Position to = move.getTo();
                 bw.write(from.getR() + "," + from.getC() + "," + to.getR() + "," + to.getC());
+                if (move.getPromotionChoice() != null) {
+                    bw.write("," + Board.normalizePromotionChoice(move.getPromotionChoice()));
+                }
                 bw.newLine();
             }
         } catch (Exception e) {
