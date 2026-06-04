@@ -13,7 +13,7 @@ public class SaveManager {
      * Chức năng: Thực thi tuần tự hóa (Serialization) trạng thái game ra tệp tin cấu hình.
      * Ánh xạ các Use Case phân rã thành phần:
      */
-    public static void saveGameData(Color currentTurn, int secondsElapsed, List<MoveLog> moves,boolean playWithAI) {
+    public static void saveGameData(Color currentTurn, int secondsElapsed,int undoCount, List<MoveLog> moves,boolean playWithAI) {
         String saveFile = playWithAI ? SAVE_FILE_AI : SAVE_FILE;
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(saveFile))) {
             /* * MÃ USE CASE: UC-04.1.1 (Trích xuất lượt đi)
@@ -27,7 +27,8 @@ public class SaveManager {
              */
             bw.write(String.valueOf(secondsElapsed));
             bw.newLine();
-
+            bw.write(String.valueOf(undoCount));
+            bw.newLine();
             for (MoveLog move : moves) {
                 Position from = move.getFrom();
                 Position to = move.getTo();
@@ -51,6 +52,7 @@ public class SaveManager {
             String turn = br.readLine();
             data.setTurn(turn.equals("W") ? Color.WHITE : Color.BLACK);
             data.setSecondsElapsed(Integer.parseInt(br.readLine()));
+            data.setUndoCount(Integer.parseInt(br.readLine()));
             String line;
             while ((line = br.readLine()) != null) {
                 data.getMoves().add(line);

@@ -153,7 +153,7 @@ public class GameController {
             /* * [TRIGGER AUTO-SAVE]: Kích hoạt UC-04.1 (Tự động lưu ván đấu)
              * Chức năng: Đảm bảo tính bền vững dữ liệu ngay sau khi một nước đi hợp lệ được thực hiện xong.
              */
-            SaveLoadController.autoSave(currentTurn, secondsElapsed,moveHistory,playWithAI);
+            SaveLoadController.autoSave(currentTurn, secondsElapsed,undoCount,moveHistory,playWithAI);
             selectedPosition = null;
             view.resetBoardColors();
             triggerAIMoveIfNeeded();
@@ -621,7 +621,7 @@ public class GameController {
         System.out.println("[SYSTEM] Đã thực hiện Undo.");
         view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
         view.updateBoardGUI();
-        SaveLoadController.autoSave(currentTurn,secondsElapsed,moveHistory,playWithAI);
+        SaveLoadController.autoSave(currentTurn,secondsElapsed,undoCount,moveHistory,playWithAI);
     }
     public void redo() {
         if (isPaused || gameEnded || redoStack.isEmpty() || aiThinking) {
@@ -663,7 +663,7 @@ public class GameController {
         System.out.println("[SYSTEM] Đã thực hiện Redo.");
         view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
         view.updateBoardGUI();
-        SaveLoadController.autoSave(currentTurn, secondsElapsed,moveHistory,playWithAI);
+        SaveLoadController.autoSave(currentTurn, secondsElapsed,undoCount,moveHistory,playWithAI);
     }
     public void restartGame() {
         this.board.reset();
@@ -723,5 +723,12 @@ public class GameController {
             view.dispose();
             new StartWindow();
         }
+    }
+    public int getUndoCount() {
+        return undoCount;
+    }
+
+    public void setUndoCount(int undoCount) {
+        this.undoCount = undoCount;
     }
 }
