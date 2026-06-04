@@ -268,7 +268,7 @@ public class GameWindow extends JFrame {
                 if (dropPosition == null) {
                     resetBoardColors();
                 } else if (dragStartPosition.equals(dropPosition)) {
-                    resetBoardColors();
+                    // Keep the move hints visible after a normal click on the selected piece.
                 } else {
                     controller.handleDragDrop(
                             dragStartPosition.getR(),
