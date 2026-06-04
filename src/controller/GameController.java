@@ -382,6 +382,7 @@ public class GameController {
      * Thỏa mãn SR1: Thao tác chuyển đổi trạng thái phải diễn ra lập tức (<0.1 giây).
      */
     public void togglePause() {
+        // [UC-05.1.1] & [UC-05.2.1]: Đảo trạng thái isPaused
         isPaused = !isPaused;
 
         if (isPaused) {
@@ -389,25 +390,25 @@ public class GameController {
              * Mô tả: Gọi hàm đóng băng luồng đếm giờ và đổi trạng thái sang Paused.
              */
             try {
-                gameTimer.stop();
+                gameTimer.stop(); // [UC-05.1.1] Đóng băng đồng hồ
             } catch (Exception e) {
                 /* MÃ USE CASE: A1 (UC-05.1.5) - Luồng thay thế: Bắt lỗi bất định của Timer */
                 e.printStackTrace();
             }
 
+            // [UC-05.1.2] & [SR2]: Xóa vết quân cờ đang chọn để bảo mật thế trận
             selectedPosition = null;
             view.resetBoardColors();
 
         } else {
-            /* * MÃ USE CASE: UC-05.2.1 & UC-05.2.3 (Luồng Resume)
-             * Mô tả: Kích hoạt lại updateStateToPlaying. Tiếp tục luồng chạy của Timer.
-             */
             try {
-                gameTimer.start();
+                gameTimer.start(); // [UC-05.2.3] Tiếp tục đồng hồ
             } catch (Exception e) {
                 e.printStackTrace(); // Xử lý lỗi A1
             }
         }
+
+        // [UC-05.1.4] & [UC-05.2.2]: Cập nhật hiển thị lớp phủ Overlay trên giao diện
         view.updatePauseButton(isPaused);
         triggerAIMoveIfNeeded();
     }
@@ -415,7 +416,8 @@ public class GameController {
     public void handleSquareClick(int row, int col) {
         /*
          * MÃ USE CASE: UC-05.1.3 (Vô hiệu hóa tương tác khi Pause)
-         * Mô tả: Kiểm tra cờ isPaused. Nếu true (đang tạm dừng), mọi sự kiện click
+         * & UC-07.3 (Hệ thống kích hoạt luồng "End game", dừng tất cả các bộ đếm thời gian của hai bên và khóa hoàn toàn bàn cờ.)
+         * Mô tả: Kiểm tra nếu end game hoặc bàn cờ isPaused. Nếu true (đang tạm dừng), mọi sự kiện click
          * chuột vào ô cờ sẽ bị bỏ qua để ngăn chặn đi quân gian lận.
          */
         if (isPaused || gameEnded || isAITurn() || aiThinking) {
@@ -568,6 +570,10 @@ public class GameController {
         view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
     }
     public void undo() {
+        /*
+         * [SR3 của UC-05]: Vô hiệu hóa tính năng Hoàn tác trong lúc Tạm dừng.
+         * Ngăn chặn người chơi thay đổi trạng thái bàn cờ khi đồng hồ đã đóng băng.
+         */
         if (isPaused || gameEnded || undoStack.isEmpty() || aiThinking) {
             return;
         }
@@ -613,6 +619,9 @@ public class GameController {
         SaveLoadController.autoSave(currentTurn,secondsElapsed,moveHistory,playWithAI);
     }
     public void redo() {
+        /*
+         * [SR3 của UC-05]: Vô hiệu hóa tính năng Làm lại trong lúc Tạm dừng.
+         */
         if (isPaused || gameEnded || redoStack.isEmpty() || aiThinking) {
             return;
         }
@@ -683,6 +692,7 @@ public class GameController {
                 "Quay Lại Menu"
         };
 
+        // [UC-07.5] Bật Pop-up thông báo chiến thắng kèm tùy chọn điều hướng
         int choice = JOptionPane.showOptionDialog(
                 view,
                 message,
@@ -694,11 +704,12 @@ public class GameController {
                 options[0]
         );
 
+        // [UC-07.6] Xử lý lựa chọn của người chơi sau khi game kết thúc
         if (choice == 0) {
-            restartGame();
+            restartGame(); // Khởi tạo lại bàn cờ mới
         } else if (choice == 1) {
-            view.dispose();
-            new StartWindow();
+            view.dispose(); // Đóng cửa sổ
+            new StartWindow(); // Trở về menu chính
         }
     }
 }
