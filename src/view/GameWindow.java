@@ -25,7 +25,8 @@ public class GameWindow extends JFrame {
     private final Color MOVE_COLOR = new Color(144, 238, 144);
     private final Color CAPTURE_COLOR = new Color(255, 100, 100);
     private GameController controller;
-    private JLabel timerLabel;
+    private JLabel whiteTimerLabel;
+    private JLabel blackTimerLabel;
     private JButton pauseButton;
 
     public GameWindow() {
@@ -144,12 +145,27 @@ public class GameWindow extends JFrame {
             rightPanel.add(btn);
             rightPanel.add(Box.createVerticalStrut(15));
         }
-        timerLabel = new JLabel("Time: 00:00");
-        timerLabel.setFont(new Font("Arial", Font.BOLD, 18));
-        timerLabel.setAlignmentX(CENTER_ALIGNMENT);
 
-        rightPanel.add(timerLabel);
+        // --- BẮT ĐẦU: GIAO DIỆN ĐỒNG HỒ ĐÔI ---
+        JPanel blackTimerPanel = new JPanel();
+        blackTimerPanel.setBackground(CONTROL_PANEL_BG);
+        blackTimerPanel.setBorder(BorderFactory.createTitledBorder("Thời gian ĐEN"));
+        blackTimerLabel = new JLabel("10:00");
+        blackTimerLabel.setFont(new Font("Consolas", Font.BOLD, 28));
+        blackTimerPanel.add(blackTimerLabel);
+
+        JPanel whiteTimerPanel = new JPanel();
+        whiteTimerPanel.setBackground(CONTROL_PANEL_BG);
+        whiteTimerPanel.setBorder(BorderFactory.createTitledBorder("Thời gian TRẮNG"));
+        whiteTimerLabel = new JLabel("10:00");
+        whiteTimerLabel.setFont(new Font("Consolas", Font.BOLD, 28));
+        whiteTimerPanel.add(whiteTimerLabel);
+
+        rightPanel.add(blackTimerPanel);
+        rightPanel.add(Box.createVerticalStrut(15));
+        rightPanel.add(whiteTimerPanel);
         rightPanel.add(Box.createVerticalStrut(20));
+        // --- KẾT THÚC: GIAO DIỆN ĐỒNG HỒ ĐÔI ---
 
         add(rightPanel, BorderLayout.EAST);
         updateBoardGUI();
@@ -235,14 +251,25 @@ public class GameWindow extends JFrame {
         updateBoardGUI();
     }
 
-    public void updateTimer(int seconds) {
+    public void updateTimer(int whiteSeconds, int blackSeconds, Color currentTurn) {
+        int wMin = whiteSeconds / 60;
+        int wSec = whiteSeconds % 60;
+        whiteTimerLabel.setText(String.format("%02d:%02d", wMin, wSec));
 
-        int minutes = seconds / 60;
-        int remainSeconds = seconds % 60;
+        int bMin = blackSeconds / 60;
+        int bSec = blackSeconds % 60;
+        blackTimerLabel.setText(String.format("%02d:%02d", bMin, bSec));
 
-        timerLabel.setText(String.format("Time: %02d:%02d",
-                minutes,
-                remainSeconds));
+        if (currentTurn == Color.WHITE) {
+            whiteTimerLabel.setForeground(new Color(40, 167, 69));
+            blackTimerLabel.setForeground(Color.GRAY);
+        } else {
+            blackTimerLabel.setForeground(new Color(40, 167, 69));
+            whiteTimerLabel.setForeground(Color.GRAY);
+        }
+
+        if (whiteSeconds <= 30) whiteTimerLabel.setForeground(new Color(220, 53, 69));
+        if (blackSeconds <= 30) blackTimerLabel.setForeground(new Color(220, 53, 69));
     }
 
     public void updatePauseButton(boolean paused) {
