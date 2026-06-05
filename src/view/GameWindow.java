@@ -6,10 +6,11 @@ import model.King;
 import model.Piece;
 import model.Position;
 
-import javax.swing.JOptionPane;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseMotionAdapter;
 import java.io.File;
 
 public class GameWindow extends JFrame {
@@ -27,7 +28,10 @@ public class GameWindow extends JFrame {
     private GameController controller;
     private JLabel whiteTimerLabel;
     private JLabel blackTimerLabel;
+
     private JButton pauseButton;
+    private JLayeredPane layeredPane;
+    private JPanel pauseOverlay;
 
     public GameWindow() {
         this.board = new Board();
@@ -91,10 +95,32 @@ public class GameWindow extends JFrame {
         mainBoardContainer.add(boardPanel, BorderLayout.CENTER);
         mainBoardContainer.add(colLabels, BorderLayout.SOUTH);
 
-        JPanel centerWrapper = new JPanel();
+        // BẮT ĐẦU: CẤU TRÚC LAYERED PANE CHO UC05: PAUSE/RESUME
+        layeredPane = new JLayeredPane();
+        layeredPane.setLayout(new OverlayLayout(layeredPane));
+        mainBoardContainer.setPreferredSize(new Dimension(630, 630));
+        JPanel centerWrapper = new JPanel(new GridBagLayout());
         centerWrapper.setBackground(CONTROL_PANEL_BG);
         centerWrapper.add(mainBoardContainer);
-        add(centerWrapper, BorderLayout.CENTER);
+        layeredPane.add(centerWrapper, JLayeredPane.DEFAULT_LAYER);
+
+        pauseOverlay = new JPanel(new GridBagLayout());
+        pauseOverlay.setBackground(new Color(0, 0, 0, 180));
+        JLabel pauseLabel = new JLabel("TẠM DỪNG");
+        pauseLabel.setFont(new Font("Consolas", Font.BOLD, 45));
+        pauseLabel.setForeground(new Color(255, 100, 100));
+        pauseOverlay.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        pauseOverlay.add(pauseLabel);
+
+        pauseOverlay.addMouseListener(new MouseAdapter() {
+        });
+        pauseOverlay.addMouseMotionListener(new MouseMotionAdapter() {
+        });
+        pauseOverlay.setVisible(false);
+        pauseLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        layeredPane.add(pauseOverlay, JLayeredPane.PALETTE_LAYER);
+        add(layeredPane, BorderLayout.CENTER);
+
         JPanel rightPanel = new JPanel();
         rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
         rightPanel.setBackground(CONTROL_PANEL_BG);
@@ -272,14 +298,23 @@ public class GameWindow extends JFrame {
         if (blackSeconds <= 30) blackTimerLabel.setForeground(new Color(220, 53, 69));
     }
 
+    /**
+     * [GD4-01.5] UC05: Pause/Resume
+     * Chức năng: Cập nhật nút bấm và bật/tắt Overlay che bàn cờ
+     */
     public void updatePauseButton(boolean paused) {
 
         if (paused) {
             pauseButton.setText("Tiếp Tục");
+            pauseOverlay.setVisible(true);
         } else {
             pauseButton.setText("Tạm Dừng");
+            pauseOverlay.setVisible(false);
         }
+        layeredPane.repaint();
+        layeredPane.revalidate();
     }
+
     public GameController getController() {
         return controller;
     }
