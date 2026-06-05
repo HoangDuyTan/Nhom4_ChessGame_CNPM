@@ -17,21 +17,15 @@ public class Pawn extends Piece {
             if (rowDiff == direction && target == null) {
                 return true;
             }
-            if (from.getR() == startRow && rowDiff == 2 * direction && target == null) {
-                Position middle = new Position(from.getR() + direction, from.getC());
-                if (board.get(middle) == null) {
+            if (from.getR() == startRow && rowDiff == 2 * direction) {
+                Position stepOver = new Position(from.getR() + direction, from.getC());
+                if (board.get(stepOver) == null && target == null) {
                     return true;
                 }
             }
         }
         if (colDiff == 1 && rowDiff == direction) {
-            if (target != null && target.getColor() != this.color) {
-                return true;
-            }
-            Position enPassant = board.getEnPassantTarget();
-            if (enPassant != null && enPassant.equals(to) && board.canCaptureEnPassant(from, to, color)) {
-                return true;
-            }
+            return target != null && target.getColor() != this.color;
         }
         return false;
     }
