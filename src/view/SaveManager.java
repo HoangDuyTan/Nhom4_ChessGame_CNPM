@@ -88,6 +88,10 @@ public class SaveManager {
         return new File(SAVE_FILE).exists();
     }
 
+    /**
+     * Chức năng: Xóa tệp dữ liệu lưu ván đấu.
+     * Ánh xạ (SR3 của UC-07): Được gọi khi có người chơi đầu hàng để xóa trạng thái lưu cũ.
+     */
     public static void deleteSaveFile() {
         File file = new File(SAVE_FILE);
         if (file.exists()) file.delete();
