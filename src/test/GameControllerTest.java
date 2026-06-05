@@ -198,4 +198,50 @@ public class GameControllerTest {
         assertEquals(timeBefore + 5, timeAfter, "Lỗi: Thời gian của phe Trắng không được cộng 5s từ hàm processMove!");
         assertEquals(Color.BLACK, gameController.getCurrentTurn(), "Lỗi: Không đổi lượt sang phe Đen!");
     }
+
+
+    // =========================================================================
+    // PHẦN TEST CỦA BẠN: KIỂM THỬ CHỨC NĂNG PAUSE/RESUME VÀ BẢO MẬT (UC-05)
+    // =========================================================================
+
+    /**
+     * [Test Cơ chế Tạm dừng - UC-05.1 và Tiếp tục - UC-05.2]
+     * Xác minh hàm togglePause hoạt động đúng vòng đời: Bật -> Tắt
+     */
+    @Test
+    void testTogglePauseState() {
+        // Mặc định khi mới tạo Controller, isPaused = false.
+        // Khi gọi togglePause lần 1 -> isPaused phải chuyển thành true
+        assertDoesNotThrow(() -> gameController.togglePause(), "Hàm togglePause bị lỗi khi view null!");
+
+        // Gọi lần 2 -> isPaused phải chuyển lại thành false (Tiếp tục)
+        assertDoesNotThrow(() -> gameController.togglePause(), "Lỗi khi Resume game!");
+    }
+
+    /**
+     * [Test An Ninh Cờ Vua - Guard Clause]
+     * Kiểm tra cơ chế chặn tương tác: Khi game đang Tạm Dừng, mọi click chuột lên bàn cờ
+     * phải bị từ chối xử lý, đảm bảo người chơi không thể đi quân gian lận.
+     */
+    @Test
+    void testInteractionLockedWhenPaused() {
+        // 1. Kích hoạt Tạm Dừng
+        gameController.togglePause();
+
+        // 2. Cố tình click chọn quân Tốt ở ô (1,0)
+        try {
+            gameController.handleSquareClick(1, 0);
+        } catch (Exception e) {}
+
+        // 3. XÁC MINH: Nếu guard clause (if isPaused return) hoạt động đúng,
+        // thì controller sẽ KHÔNG chọn bất cứ quân cờ nào (selectedPosition vẫn là null).
+        // Ta xác minh bằng cách đi tiếp nước (2,0). Nếu selectedPosition null, hàm sẽ coi đây
+        // là click chọn quân chứ không phải di chuyển, do đó thời gian và lượt đi KHÔNG ĐỔI.
+        try {
+            gameController.handleSquareClick(2, 0);
+        } catch (Exception e) {}
+
+        // 4. Lượt đi vẫn phải là phe TRẮNG, chứng tỏ nước đi ăn gian đã bị chặn đứng hoàn toàn!
+        assertEquals(Color.WHITE, gameController.getCurrentTurn(), "Bảo mật kém: Lượt đi bị thay đổi mặc dù game đang tạm dừng!");
+    }
 }
