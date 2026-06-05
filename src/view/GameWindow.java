@@ -156,11 +156,17 @@ public class GameWindow extends JFrame {
 
                 pauseButton = btn;
 
+                /*
+                 * MÃ USE CASE: Bước 1 (UC-05.1) và Bước 6 (UC-05.2) - Trigger
+                 * Mô tả: Bắt sự kiện khi người chơi nhấn nút "Tạm Dừng" / "Tiếp Tục"
+                 * trên giao diện điều khiển.
+                 */
                 btn.addActionListener(e -> {
                     controller.togglePause();
                 });
             } else if (name.equals("Đầu Hàng")) {
 
+                // (UC-07): Người chơi bấm chọn chức năng "Đầu Hàng" trên giao diện màn hình thi đấu.
                 btn.addActionListener(e -> {
                     controller.resignGame();
                 });
@@ -299,16 +305,25 @@ public class GameWindow extends JFrame {
     }
 
     /**
-     * [GD4-01.5] UC05: Pause/Resume
+     * UC-05.1 & UC-05.2: Pause/Resume
      * Chức năng: Cập nhật nút bấm và bật/tắt Overlay che bàn cờ
      */
     public void updatePauseButton(boolean paused) {
 
         if (paused) {
             pauseButton.setText("Tiếp Tục");
+            /*
+             * MÃ USE CASE: UC-05.1.4 & Yêu cầu đặc biệt SR2
+             * Mô tả: Hiển thị lớp phủ (Overlay) mờ đè lên màn cờ để che đi các
+             * quân cờ/nước đi cốt lõi, ngăn hành vi tính toán nước đi gian lận.
+             */
             pauseOverlay.setVisible(true);
         } else {
             pauseButton.setText("Tạm Dừng");
+            /*
+             * MÃ USE CASE: UC-05.2.2
+             * Mô tả: Ẩn lớp phủ "Tạm dừng", mở khóa lại tương tác hình ảnh trên bàn cờ.
+             */
             pauseOverlay.setVisible(false);
         }
         layeredPane.repaint();
