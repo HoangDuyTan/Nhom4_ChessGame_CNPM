@@ -10,9 +10,7 @@ public class Board {
     public Board() {
         init();
     }
-    public Position getEnPassantTarget() {
-        return enPassantTarget;
-    }
+
     public Piece get(Position pos) {
         return grid[pos.getR()][pos.getC()];
     }
@@ -23,7 +21,9 @@ public class Board {
             grid[pos.getR()][pos.getC()] = piece;
         }
     }
-
+    public Position getEnPassantTarget() {
+        return enPassantTarget;
+    }
     public void init() {
         grid[0][0] = new Rook(Color.WHITE);
         grid[0][1] = new Knight(Color.WHITE);
@@ -253,5 +253,14 @@ public class Board {
                 grid[r][c] = piece;
             }
         }
+    }
+    public void reset() {
+        for (int r = 0; r < 8; r++) {
+            for (int c = 0; c < 8; c++) {
+                grid[r][c] = null;
+            }
+        }
+        this.enPassantTarget = null;
+        init();
     }
 }

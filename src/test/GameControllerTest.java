@@ -149,7 +149,6 @@ public class GameControllerTest {
         assertEquals(whiteTimeSimulated, gameController.getWhiteTimeLeft(), "Hàm setSecondsElapsed giải nén thời gian TRẮNG bị sai!");
         assertEquals(blackTimeSimulated, gameController.getBlackTimeLeft(), "Hàm setSecondsElapsed giải nén thời gian ĐEN bị sai!");
     }
-
     /**
      * [Test Trạng Thái Biên]
      * Kiểm tra cơ chế tự động khôi phục về thời gian mặc định (600s) khi dữ liệu truyền vào bằng 0.
@@ -243,5 +242,152 @@ public class GameControllerTest {
 
         // 4. Lượt đi vẫn phải là phe TRẮNG, chứng tỏ nước đi ăn gian đã bị chặn đứng hoàn toàn!
         assertEquals(Color.WHITE, gameController.getCurrentTurn(), "Bảo mật kém: Lượt đi bị thay đổi mặc dù game đang tạm dừng!");
+    }
+
+    // =========================================================================
+    // PHẦN TEST CỦA BẠN: KIỂM THỬ CHỨC RESTART GAME (UC-06)
+    // =========================================================================
+
+    /**
+     * [UC-06] Restart Game
+     * Mục tiêu:
+     * Đảm bảo khi bắt đầu ván mới, lượt chơi luôn được đưa về phe Trắng.
+     */
+    @Test
+    void testRestartResetCurrentTurn() {
+
+        // Giả lập đang tới lượt Đen
+        gameController.setCurrentTurn(Color.BLACK);
+
+        // Người chơi chọn "Restart Game"
+        gameController.restartGame();
+
+        // Sau khi restart phải quay lại lượt Trắng
+        assertEquals(
+                Color.WHITE,
+                gameController.getCurrentTurn(),
+                "Lượt chơi không được reset về phe Trắng!"
+        );
+    }
+
+    /**
+     * [UC-06] Restart Game
+     * Mục tiêu:
+     * Đảm bảo đồng hồ của cả hai bên được khôi phục về thời gian mặc định.
+     */
+    @Test
+    void testRestartResetTimer() {
+
+        // Giả lập đồng hồ đang chạy với giá trị bất kỳ
+        gameController.setWhiteTimeLeft(150);
+        gameController.setBlackTimeLeft(300);
+
+        // Khởi tạo ván đấu mới
+        gameController.restartGame();
+
+        // Đồng hồ Trắng phải trở về 600 giây
+        assertEquals(
+                600,
+                gameController.getWhiteTimeLeft(),
+                "Đồng hồ Trắng không reset về 600 giây!"
+        );
+
+        // Đồng hồ Đen phải trở về 600 giây
+        assertEquals(
+                600,
+                gameController.getBlackTimeLeft(),
+                "Đồng hồ Đen không reset về 600 giây!"
+        );
+    }
+
+    /**
+     * [UC-06] Restart Game
+     * Mục tiêu:
+     * Đảm bảo trạng thái bàn cờ được phục hồi về vị trí khởi tạo ban đầu.
+     */
+    @Test
+    void testRestartRestoreBoard() {
+
+        // Giả lập một quân tốt đã di chuyển khỏi vị trí ban đầu
+        board.move(
+                new Position(1,0),
+                new Position(2,0)
+        );
+
+        // Người chơi tạo ván đấu mới
+        gameController.restartGame();
+
+        // Quân tốt phải xuất hiện lại ở vị trí xuất phát
+        assertNotNull(
+                board.get(new Position(1,0)),
+                "Quân tốt ban đầu không được khôi phục!"
+        );
+
+        // Ô đích trước đó phải được làm sạch
+        assertNull(
+                board.get(new Position(2,0)),
+                "Bàn cờ chưa được reset hoàn toàn!"
+        );
+    }
+
+    /**
+     * [UC-06] Restart Game
+     * Mục tiêu:
+     * Đảm bảo trạng thái Pause bị hủy sau khi bắt đầu ván mới.
+     */
+    @Test
+    void testRestartExitPauseMode() {
+
+        // Đưa trò chơi vào trạng thái Pause
+        gameController.togglePause();
+
+        // Thực hiện restart
+        assertDoesNotThrow(
+                () -> gameController.restartGame(),
+                "Không thể restart khi game đang Pause!"
+        );
+
+        // Sau restart, game phải chấp nhận tương tác trở lại
+        assertDoesNotThrow(
+                () -> gameController.handleSquareClick(1,0),
+                "Bàn cờ vẫn bị khóa sau khi restart!"
+        );
+    }
+
+    /**
+     * [UC-06] Restart Game
+     * Mục tiêu:
+     * Đảm bảo lịch sử Undo/Redo bị xóa hoàn toàn khi tạo ván mới.
+     */
+    @Test
+    void testRestartClearUndoRedoHistory() {
+
+        // Giả lập người chơi đã thực hiện một nước đi
+        try {
+            gameController.handleSquareClick(1,0);
+            gameController.handleSquareClick(2,0);
+        } catch (Exception e) {}
+
+        // Tạo ván đấu mới
+        gameController.restartGame();
+
+        // Undo không được gây lỗi dù stack đã bị xóa
+        assertDoesNotThrow(
+                () -> gameController.undo(),
+                "Undo gây lỗi sau khi restart!"
+        );
+
+        // Redo cũng không được gây lỗi
+        assertDoesNotThrow(
+                () -> gameController.redo(),
+                "Redo gây lỗi sau khi restart!"
+        );
+
+        // Lượt chơi vẫn phải là trạng thái khởi tạo
+        assertEquals(
+                Color.WHITE,
+                gameController.getCurrentTurn(),
+                "Undo/Redo vẫn còn tác động sau khi restart!"
+        );
     }
 }

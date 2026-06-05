@@ -24,10 +24,9 @@ public class GameController {
     private final int INCREMENT = 5;
     private int whiteTimeLeft = BASE_TIME;
     private int blackTimeLeft = BASE_TIME;
-
     private boolean isPaused = false;
-    private boolean gameEnded = false;
 
+    private boolean gameEnded = false;
     private Stack<GameState> undoStack = new Stack<>();
     private Stack<GameState> redoStack = new Stack<>();
 
@@ -37,7 +36,6 @@ public class GameController {
 
         startTimer();
     }
-
     /**
      * CHỨC NĂNG: UC-02.1: Select Piece (Chọn quân cờ)
      * Mô tả: Người chơi chọn một quân cờ của phe mình. Hệ thống kiểm tra lượt đi
@@ -51,15 +49,18 @@ public class GameController {
                 return;
             }
             selectedPosition = clicked;
-            view.resetBoardColors();
+            if (view != null) {
+                view.resetBoardColors();
+            }
             /**
              * CHỨC NĂNG: UC-02.3: Check Available Move (Kiểm tra nước đi có sẵn)
              * Mô tả: Hệ thống tự động tính toán luật đi của quân cờ để highlight các ô đích khả dụng.
              */
-            view.highlightValidMoves(clicked, board);
+            if (view != null) {
+                view.highlightValidMoves(clicked, board);
+            }
         }
     }
-
     /**
      * CHỨC NĂNG: Điều phối hành động nhấp chuột khi đã có quân cờ được chọn trước đó
      * Mô tả: Phân tách hành vi người chơi dựa trên ô click tiếp theo (Hủy chọn / Đổi quân / Đi quân).
@@ -77,19 +78,18 @@ public class GameController {
             processMove(clicked);
         }
     }
-
     /**
      * CHỨC NĂNG: UC-02.2: Select Destination (Chọn ô đích) & Xử lý di chuyển quân
      * Mô tả: Hạ quân cờ xuống vị trí mới, lưu lịch sử, cập nhật bàn cờ và đổi lượt chơi.
      */
     private void processMove(Position destination) {
-        GameState stateBefore = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
+        GameState stateBefore = new GameState(board, currentTurn);
         boolean moved = board.move(selectedPosition, destination);
-
         if (moved) {
             undoStack.push(stateBefore);
             redoStack.clear();
-
+            view.updateBoardGUI();
+            checkGameState();
             // --- BẮT ĐẦU: CỘNG GIỜ FISCHER VÀ ĐÓNG GÓI BIT ---
             if (currentTurn == Color.WHITE) {
                 whiteTimeLeft += INCREMENT;
@@ -102,38 +102,32 @@ public class GameController {
             // --- KẾT THÚC ---
 
             currentTurn = (currentTurn == Color.WHITE) ? Color.BLACK : Color.WHITE;
-            selectedPosition = null;
+            view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
 
             /* * [TRIGGER AUTO-SAVE]: Kích hoạt UC-04.1 (Tự động lưu ván đấu)
              * Chức năng: Đảm bảo tính bền vững dữ liệu ngay sau khi một nước đi hợp lệ được thực hiện xong.
              */
             SaveLoadController.autoSave(currentTurn, board, secondsElapsed);
-
-            if (view != null) {
-                view.updateBoardGUI();
-                view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
-                view.resetBoardColors();
-                checkGameState();
-            }
+            selectedPosition = null;
+            view.resetBoardColors();
         } else {
-            if (view != null) {
-                String msg = board.isInCheck(currentTurn)
-                        ? "Bạn đang bị chiếu! Hãy chọn nước đi bảo vệ Vua."
-                        : "Nước đi không hợp lệ!";
-                JOptionPane.showMessageDialog(view, msg, "Lỗi di chuyển", JOptionPane.ERROR_MESSAGE);
-            }
+            String msg = board.isInCheck(currentTurn)
+                    ? "Bạn đang bị chiếu! Hãy chọn nước đi bảo vệ Vua."
+                    : "Nước đi không hợp lệ!";
+            JOptionPane.showMessageDialog(view, msg, "Lỗi di chuyển", JOptionPane.ERROR_MESSAGE);
         }
     }
-
     private void checkGameState() {
         Color opponentColor = (currentTurn == Color.WHITE) ? Color.BLACK : Color.WHITE;
         boolean inCheck = board.isInCheck(opponentColor);
         boolean canMove = board.hasValidMoves(opponentColor);
         if (inCheck && !canMove) {
             JOptionPane.showMessageDialog(view, "CHIẾU HẾT! " + (currentTurn == Color.WHITE ? "Trắng" : "Đen") + " thắng!");
-        } else if (!inCheck && !canMove) {
+        }
+        else if (!inCheck && !canMove) {
             JOptionPane.showMessageDialog(view, "HÒA CỜ (Stalemate)!");
-        } else if (inCheck) {
+        }
+        else if (inCheck) {
             JOptionPane.showMessageDialog(view, "Đang bị CHIẾU!");
         }
     }
@@ -162,12 +156,13 @@ public class GameController {
     private void handleTimeOut(Color loser) {
         gameEnded = true;
         gameTimer.stop();
+
         SaveManager.deleteSaveFile();
+
         String winner = (loser == Color.WHITE) ? "Quân Đen" : "Quân Trắng";
         JOptionPane.showMessageDialog(view, "Hết giờ! " + winner + " giành chiến thắng.",
                 "Kết thúc ván đấu", JOptionPane.INFORMATION_MESSAGE);
     }
-
     /**
      * MÃ USE CASE: UC-05.1 và UC-05.2 (Pause/Resume Game)
      * Chức năng: Xử lý thay đổi trạng thái Tạm dừng / Tiếp tục của trận đấu.
@@ -186,6 +181,7 @@ public class GameController {
                 /* MÃ USE CASE: A1 (UC-05.1.5) - Luồng thay thế: Bắt lỗi bất định của Timer */
                 e.printStackTrace();
             }
+            gameTimer.stop();
 
             selectedPosition = null;
             if (view != null) {
@@ -200,8 +196,8 @@ public class GameController {
             } catch (Exception e) {
                 e.printStackTrace(); // Xử lý lỗi A1
             }
+            gameTimer.start();
         }
-
         if (view != null) {
             view.updatePauseButton(isPaused);
         }
@@ -231,7 +227,6 @@ public class GameController {
      * Chức năng: Xử lý người chơi đầu hàng, xác nhận hộp thoại và kết thúc.
      */
     public void resignGame() {
-
         // [Pre-Conditions]: Trò chơi phải đang trong trạng thái diễn ra
         if (gameEnded) {
             return;
@@ -241,13 +236,11 @@ public class GameController {
                 (currentTurn == Color.WHITE)
                         ? "Trắng"
                         : "Đen";
-
         // (UC-07.4): Hệ thống tự động tính toán xác lập trạng thái kết quả (Đối thủ được xử thắng)
         String winner =
                 (currentTurn == Color.WHITE)
                         ? "Đen"
                         : "Trắng";
-
         /*
          * (UC-07.1) & SR1: Hệ thống hiển thị hộp thoại yêu cầu xác nhận.
          * Nút "Yes" và "No" tách biệt rõ ràng nhờ cấu trúc tiêu chuẩn của JOptionPane.
@@ -258,25 +251,20 @@ public class GameController {
                 "Xác nhận đầu hàng",
                 JOptionPane.YES_NO_OPTION
         );
-
         // (UC-07.2): Người chơi nhấp chọn nút "Yes" để chính thức đầu hàng
         if (choice == JOptionPane.YES_OPTION) {
-
             /*
              * (UC-07.3) & SR2: Kích hoạt luồng "End game", khóa hoàn toàn bàn cờ.
              * Tước bỏ quyền đi quân nhằm ngăn chặn mọi hành vi thay đổi thế cờ.
              */
             gameEnded = true;
-
             // (UC-07.3) & SR2: Dừng tất cả các bộ đếm thời gian của hai bên.
             gameTimer.stop();
-
             /*
              * SR3: Đảm bảo tính toàn vẹn dữ liệu.
              * File savegame.txt bị xóa ngay lập tức để trận đấu kết thúc hoàn toàn.
              */
             SaveManager.deleteSaveFile();
-
             /*
              * (UC-07.5): Hệ thống bật pop-up thông báo tên người thắng cuộc kèm nguyên nhân kết thúc.
              * Ghi chú (UC-07.6): Sau khi bấm OK, bàn đấu giữ nguyên trạng thái đóng băng để người chơi nhìn lại, người chơi có thể tự thao tác "Quay lại Menu" hoặc "Chơi Game Mới" thông qua Menu điều khiển.
@@ -285,7 +273,6 @@ public class GameController {
                     view,
                     winner + " thắng do đối thủ đầu hàng!"
             );
-
             /*
              * Luồng thay thế A1 (UC-07.7) & A2:
              * Nếu chọn "No" hoặc tắt cửa sổ (choice != YES_OPTION), hàm sẽ thoát tại đây.
@@ -293,11 +280,9 @@ public class GameController {
              */
         }
     }
-
     public Color getCurrentTurn() {
         return currentTurn;
     }
-
     public void setCurrentTurn(Color turn) {
         this.currentTurn = turn;
     }
@@ -305,7 +290,6 @@ public class GameController {
     public int getSecondsElapsed() {
         return secondsElapsed;
     }
-
     public int getWhiteTimeLeft() {
         return whiteTimeLeft;
     }
@@ -321,7 +305,6 @@ public class GameController {
     public void setBlackTimeLeft(int blackTimeLeft) {
         this.blackTimeLeft = blackTimeLeft;
     }
-
     public void setSecondsElapsed(int packedSeconds) {
         this.secondsElapsed = packedSeconds;
 
@@ -338,7 +321,7 @@ public class GameController {
 
     public void undo() {
         if (isPaused || gameEnded || undoStack.isEmpty()) return;
-        GameState currentState = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
+        GameState currentState = new GameState(board, currentTurn);
         redoStack.push(currentState);
 
         GameState previousState = undoStack.pop();
@@ -353,7 +336,7 @@ public class GameController {
 
     public void redo() {
         if (isPaused || gameEnded || redoStack.isEmpty()) return;
-        GameState currentState = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
+        GameState currentState = new GameState(board, currentTurn);
         undoStack.push(currentState);
 
         GameState nextState = redoStack.pop();
@@ -364,5 +347,30 @@ public class GameController {
         selectedPosition = null;
         view.resetBoardColors();
         SaveLoadController.autoSave(currentTurn, board, secondsElapsed);
+    }
+    public void restartGame() {
+        this.board.reset();
+
+        this.currentTurn = Color.WHITE;
+        this.selectedPosition = null;
+        this.gameEnded = false;
+        this.isPaused = false;
+
+        if (gameTimer != null) {
+            gameTimer.stop();
+        }
+        this.whiteTimeLeft = BASE_TIME;
+        this.blackTimeLeft = BASE_TIME;
+
+        startTimer();
+
+        undoStack.clear();
+        redoStack.clear();
+        if (view != null) {
+            view.resetBoardColors();
+            view.updateBoardGUI();
+            view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
+            view.updatePauseButton(false);
+        }
     }
 }

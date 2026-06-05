@@ -26,9 +26,9 @@ public class GameWindow extends JFrame {
     private final Color MOVE_COLOR = new Color(144, 238, 144);
     private final Color CAPTURE_COLOR = new Color(255, 100, 100);
     private GameController controller;
+
     private JLabel whiteTimerLabel;
     private JLabel blackTimerLabel;
-
     private JButton pauseButton;
     private JLayeredPane layeredPane;
     private JPanel pauseOverlay;
@@ -112,10 +112,8 @@ public class GameWindow extends JFrame {
         pauseOverlay.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         pauseOverlay.add(pauseLabel);
 
-        pauseOverlay.addMouseListener(new MouseAdapter() {
-        });
-        pauseOverlay.addMouseMotionListener(new MouseMotionAdapter() {
-        });
+        pauseOverlay.addMouseListener(new MouseAdapter() {});
+        pauseOverlay.addMouseMotionListener(new MouseMotionAdapter() {});
         pauseOverlay.setVisible(false);
         pauseLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         layeredPane.add(pauseOverlay, JLayeredPane.PALETTE_LAYER);
@@ -152,10 +150,22 @@ public class GameWindow extends JFrame {
                 btn.addActionListener(e -> controller.undo());
             } else if (name.equals("Đi Tiếp")) {
                 btn.addActionListener(e -> controller.redo());
+            } else if (name.equals("Chơi Game Mới")) {
+                btn.addActionListener(e -> {
+                    int choice = JOptionPane.showConfirmDialog(
+                            this,
+                            "Bạn có chắc muốn chơi ván mới?",
+                            "Xác nhận",
+                            JOptionPane.YES_NO_OPTION
+                    );
+
+                    if (choice == JOptionPane.YES_OPTION) {
+                        controller.restartGame();
+                    }
+                });
             } else if (name.equals("Tạm Dừng")) {
 
                 pauseButton = btn;
-
                 /*
                  * MÃ USE CASE: Bước 1 (UC-05.1) và Bước 6 (UC-05.2) - Trigger
                  * Mô tả: Bắt sự kiện khi người chơi nhấn nút "Tạm Dừng" / "Tiếp Tục"
@@ -165,7 +175,6 @@ public class GameWindow extends JFrame {
                     controller.togglePause();
                 });
             } else if (name.equals("Đầu Hàng")) {
-
                 // (UC-07): Người chơi bấm chọn chức năng "Đầu Hàng" trên giao diện màn hình thi đấu.
                 btn.addActionListener(e -> {
                     controller.resignGame();
@@ -309,7 +318,6 @@ public class GameWindow extends JFrame {
      * Chức năng: Cập nhật nút bấm và bật/tắt Overlay che bàn cờ
      */
     public void updatePauseButton(boolean paused) {
-
         if (paused) {
             pauseButton.setText("Tiếp Tục");
             /*
