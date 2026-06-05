@@ -30,7 +30,11 @@ public class GameController {
 
         startTimer();
     }
-
+    /**
+     * CHỨC NĂNG: UC-02.1: Select Piece (Chọn quân cờ)
+     * Mô tả: Người chơi chọn một quân cờ của phe mình. Hệ thống kiểm tra lượt đi
+     * và ghi nhận quân cờ hợp lệ để chuẩn bị cho bước di chuyển tiếp theo.
+     */
     private void handleSelection(Position clicked) {
         Piece piece = board.get(clicked);
         if (piece != null) {
@@ -40,10 +44,17 @@ public class GameController {
             }
             selectedPosition = clicked;
             view.resetBoardColors();
+            /**
+             * CHỨC NĂNG: UC-02.3: Check Available Move (Kiểm tra nước đi có sẵn)
+             * Mô tả: Hệ thống tự động tính toán luật đi của quân cờ để highlight các ô đích khả dụng.
+             */
             view.highlightValidMoves(clicked, board);
         }
     }
-
+    /**
+     * CHỨC NĂNG: Điều phối hành động nhấp chuột khi đã có quân cờ được chọn trước đó
+     * Mô tả: Phân tách hành vi người chơi dựa trên ô click tiếp theo (Hủy chọn / Đổi quân / Đi quân).
+     */
     private void handleMoveOrReSelection(Position clicked) {
         Piece pieceAtClicked = board.get(clicked);
         if (selectedPosition.equals(clicked)) {
@@ -57,7 +68,10 @@ public class GameController {
             processMove(clicked);
         }
     }
-
+    /**
+     * CHỨC NĂNG: UC-02.2: Select Destination (Chọn ô đích) & Xử lý di chuyển quân
+     * Mô tả: Hạ quân cờ xuống vị trí mới, lưu lịch sử, cập nhật bàn cờ và đổi lượt chơi.
+     */
     private void processMove(Position destination) {
         GameState stateBefore = new GameState(board, currentTurn);
         boolean moved = board.move(selectedPosition, destination);
