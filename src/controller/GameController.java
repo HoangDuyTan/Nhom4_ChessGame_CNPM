@@ -162,6 +162,7 @@ public class GameController {
     private void handleTimeOut(Color loser) {
         gameEnded = true;
         gameTimer.stop();
+        SaveManager.deleteSaveFile();
         String winner = (loser == Color.WHITE) ? "Quân Đen" : "Quân Trắng";
         JOptionPane.showMessageDialog(view, "Hết giờ! " + winner + " giành chiến thắng.",
                 "Kết thúc ván đấu", JOptionPane.INFORMATION_MESSAGE);
@@ -178,13 +179,16 @@ public class GameController {
             gameTimer.stop();
 
             selectedPosition = null;
-            view.resetBoardColors();
-
+            if (view != null) {
+                view.resetBoardColors();
+            }
         } else {
             gameTimer.start();
         }
 
-        view.updatePauseButton(isPaused);
+        if (view != null) {
+            view.updatePauseButton(isPaused);
+        }
     }
 
     public void handleSquareClick(int row, int col) {
