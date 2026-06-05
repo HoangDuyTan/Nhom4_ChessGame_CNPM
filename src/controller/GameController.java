@@ -85,12 +85,10 @@ public class GameController {
     private void processMove(Position destination) {
         GameState stateBefore = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
         boolean moved = board.move(selectedPosition, destination);
+
         if (moved) {
             undoStack.push(stateBefore);
             redoStack.clear();
-            view.updateBoardGUI();
-            checkGameState();
-
 
             // --- BẮT ĐẦU: CỘNG GIỜ FISCHER VÀ ĐÓNG GÓI BIT ---
             if (currentTurn == Color.WHITE) {
@@ -104,19 +102,26 @@ public class GameController {
             // --- KẾT THÚC ---
 
             currentTurn = (currentTurn == Color.WHITE) ? Color.BLACK : Color.WHITE;
-            view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
+            selectedPosition = null;
 
             /* * [TRIGGER AUTO-SAVE]: Kích hoạt UC-04.1 (Tự động lưu ván đấu)
              * Chức năng: Đảm bảo tính bền vững dữ liệu ngay sau khi một nước đi hợp lệ được thực hiện xong.
              */
             SaveLoadController.autoSave(currentTurn, board, secondsElapsed);
-            selectedPosition = null;
-            view.resetBoardColors();
+
+            if (view != null) {
+                view.updateBoardGUI();
+                view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
+                view.resetBoardColors();
+                checkGameState();
+            }
         } else {
-            String msg = board.isInCheck(currentTurn)
-                    ? "Bạn đang bị chiếu! Hãy chọn nước đi bảo vệ Vua."
-                    : "Nước đi không hợp lệ!";
-            JOptionPane.showMessageDialog(view, msg, "Lỗi di chuyển", JOptionPane.ERROR_MESSAGE);
+            if (view != null) {
+                String msg = board.isInCheck(currentTurn)
+                        ? "Bạn đang bị chiếu! Hãy chọn nước đi bảo vệ Vua."
+                        : "Nước đi không hợp lệ!";
+                JOptionPane.showMessageDialog(view, msg, "Lỗi di chuyển", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 
@@ -239,12 +244,32 @@ public class GameController {
         }
     }
 
+    public Color getCurrentTurn() {
+        return currentTurn;
+    }
+
     public void setCurrentTurn(Color turn) {
         this.currentTurn = turn;
     }
 
     public int getSecondsElapsed() {
         return secondsElapsed;
+    }
+
+    public int getWhiteTimeLeft() {
+        return whiteTimeLeft;
+    }
+
+    public void setWhiteTimeLeft(int whiteTimeLeft) {
+        this.whiteTimeLeft = whiteTimeLeft;
+    }
+
+    public int getBlackTimeLeft() {
+        return blackTimeLeft;
+    }
+
+    public void setBlackTimeLeft(int blackTimeLeft) {
+        this.blackTimeLeft = blackTimeLeft;
     }
 
     public void setSecondsElapsed(int packedSeconds) {

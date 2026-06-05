@@ -1,10 +1,10 @@
 B
-6
+39649880
 RNBQKBNR
-PP-PPPPP
+-PPPPPPP
+P-------
 --------
 --------
 --------
---pP----
-pp--pppp
+pppppppp
 rnbqkbnr
