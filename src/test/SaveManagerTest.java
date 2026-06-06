@@ -17,9 +17,9 @@ public class SaveManagerTest {
     @Test
     public void testSaveFileCreated() {
         // Lưu dữ liệu game xuống file
-        SaveManager.saveGameData(Color.WHITE, 100, new ArrayList<>());
+        SaveManager.saveGameData(Color.WHITE, 100, new ArrayList<>(),false);
         // Kiểm tra file savegame.txt đã được tạo hay chưa
-        assertTrue(SaveManager.hasSaveFile());
+        assertTrue(SaveManager.hasSaveFile(false));
     }
     /**
      * Mục tiêu:
@@ -29,9 +29,9 @@ public class SaveManagerTest {
     @Test
     public void testLoadGameData() {
         // Ghi dữ liệu mẫu xuống file
-        SaveManager.saveGameData(Color.WHITE, 200, new ArrayList<>());
+        SaveManager.saveGameData(Color.WHITE, 200, new ArrayList<>(),false);
         // Đọc dữ liệu từ file
-        SaveGameData data = SaveManager.loadGameData();
+        SaveGameData data = SaveManager.loadGameData(false);
         // Kiểm tra lượt chơi
 
         assertNotNull(data);
