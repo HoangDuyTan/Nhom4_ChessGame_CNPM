@@ -89,9 +89,8 @@ public class SettingWindow extends JFrame {
                     break;
             }
 
-            gameWindow.dispose();
-
-            new GameWindow();
+            gameWindow.refreshTheme();
+            dispose();
         });
         contentPanel.add(createSettingCard("Màu sắc bàn cờ", "Thay đổi tông màu hiển thị của ô cờ và quân cờ.", colorBox));
         

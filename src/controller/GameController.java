@@ -4,10 +4,7 @@ import model.*;
 import model.GameState;
 import model.Piece;
 import model.Position;
-import view.GameConfig;
-import view.GameWindow;
-import view.SaveManager;
-import view.SoundManager;
+import view.*;
 
 import javax.swing.JOptionPane;
 import java.awt.Color;
@@ -50,7 +47,9 @@ public class GameController {
         this.view = view;
         this.playWithAI = playWithAI;
 
-        startTimer();
+        if (!playWithAI) {
+            startTimer();
+        }
     }
     public List<MoveLog> getMoveHistory() {
         return moveHistory;
@@ -223,16 +222,19 @@ public class GameController {
             gameEnded = true;
             gameTimer.stop();
             SaveManager.deleteSaveFile();
-            JOptionPane.showMessageDialog(view, "CHIẾU HẾT! " + (currentTurn == Color.WHITE ? "Trắng" : "Đen") + " thắng!");
+            String winner = (currentTurn == Color.WHITE) ? "Trắng" : "Đen";
+            showGameOverDialog( "CHIẾU HẾT!\n" + winner + " thắng!");
         }
         else if (!inCheck && !canMove) {
             gameEnded = true;
             gameTimer.stop();
             SaveManager.deleteSaveFile();
-            JOptionPane.showMessageDialog(view, "HÒA CỜ (Stalemate)!");
+            showGameOverDialog( "HÒA CỜ (Stalemate)!");
         }
         else if (inCheck) {
-            JOptionPane.showMessageDialog(view, "Đang bị CHIẾU!");
+            if (!playWithAI || opponentColor != aiColor) {
+                JOptionPane.showMessageDialog(view, "Đang bị CHIẾU!");
+            }
         }
     }
 
@@ -409,8 +411,7 @@ public class GameController {
         SaveManager.deleteSaveFile();
 
         String winner = (loser == Color.WHITE) ? "Quân Đen" : "Quân Trắng";
-        JOptionPane.showMessageDialog(view, "Hết giờ! " + winner + " giành chiến thắng.",
-                "Kết thúc ván đấu", JOptionPane.INFORMATION_MESSAGE);
+        showGameOverDialog( "Hết giờ!\n" + winner + " giành chiến thắng.");
     }
     /**
      * MÃ USE CASE: UC-05.1 và UC-05.2 (Pause/Resume Game)
@@ -519,10 +520,7 @@ public class GameController {
              * (UC-07.5): Hệ thống bật pop-up thông báo tên người thắng cuộc kèm nguyên nhân kết thúc.
              * Ghi chú (UC-07.6): Sau khi bấm OK, bàn đấu giữ nguyên trạng thái đóng băng để người chơi nhìn lại, người chơi có thể tự thao tác "Quay lại Menu" hoặc "Chơi Game Mới" thông qua Menu điều khiển.
              */
-            JOptionPane.showMessageDialog(
-                    view,
-                    winner + " thắng do đối thủ đầu hàng!"
-            );
+            showGameOverDialog( winner + " thắng do đối thủ đầu hàng!" );
             /*
              * Luồng thay thế A1 (UC-07.7) & A2:
              * Nếu chọn "No" hoặc tắt cửa sổ (choice != YES_OPTION), hàm sẽ thoát tại đây.
@@ -711,5 +709,30 @@ public class GameController {
             view.updatePauseButton(false);
         }
         triggerAIMoveIfNeeded();
+    }
+    private void showGameOverDialog(String message) {
+
+        String[] options = {
+                "Chơi Ván Mới",
+                "Quay Lại Menu"
+        };
+
+        int choice = JOptionPane.showOptionDialog(
+                view,
+                message,
+                "Kết thúc ván đấu",
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.INFORMATION_MESSAGE,
+                null,
+                options,
+                options[0]
+        );
+
+        if (choice == 0) {
+            restartGame();
+        } else if (choice == 1) {
+            view.dispose();
+            new StartWindow();
+        }
     }
 }

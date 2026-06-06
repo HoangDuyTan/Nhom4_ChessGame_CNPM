@@ -5,6 +5,7 @@ import model.Board;
 import model.Position;
 
 import java.awt.Color;
+import java.lang.reflect.Field;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -538,6 +539,71 @@ public class GameControllerTest {
                 Color.WHITE,
                 gameController.getCurrentTurn(),
                 "Undo/Redo vẫn còn tác động sau khi restart!"
+        );
+    }
+    /**
+     * [UC-01: Start Game]
+     * Kiểm tra khởi tạo ván cờ khi chơi với máy.
+     */
+    @Test
+    void testStartGameWithAI() throws Exception {
+
+        Board board = new Board();
+
+        GameController controller =
+                new GameController(
+                        board,
+                        null,
+                        true
+                );
+
+        Field boardField =
+                GameController.class.getDeclaredField("board");
+
+        boardField.setAccessible(true);
+
+        Board controllerBoard =
+                (Board) boardField.get(controller);
+
+        assertNotNull(
+                controllerBoard,
+                "Bàn cờ phải được khởi tạo!"
+        );
+    }
+
+    /**
+     * [UC-01: Start Game]
+     * Bước 1:
+     * Người chơi chọn chế độ chơi với máy.
+     *
+     * Kết quả mong đợi:
+     * Hệ thống không khởi tạo đồng hồ đếm giờ.
+     */
+    @Test
+    void testNoTimerInAIMode() throws Exception {
+
+        Board board = new Board();
+
+        GameController controller =
+                new GameController(
+                        board,
+                        null,
+                        true
+                );
+
+        Field timerField =
+                GameController.class.getDeclaredField(
+                        "gameTimer"
+                );
+
+        timerField.setAccessible(true);
+
+        Object timer =
+                timerField.get(controller);
+
+        assertNull(
+                timer,
+                "Chế độ chơi với máy không được tạo đồng hồ đếm giờ!"
         );
     }
 }
