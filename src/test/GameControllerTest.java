@@ -29,6 +29,64 @@ public class GameControllerTest {
         gameController = new GameController(board, null);
     }
 
+    @Test
+    void testCanStartDragOnlyCurrentTurnPiece() {
+        assertTrue(gameController.canStartDrag(1, 0), "White should be able to drag a white pawn on the first turn.");
+        assertFalse(gameController.canStartDrag(6, 0), "White should not be able to drag a black pawn.");
+        assertFalse(gameController.canStartDrag(3, 3), "Cannot start dragging from an empty square.");
+        assertFalse(gameController.canStartDrag(-1, 0), "Cannot start dragging from outside the board.");
+    }
+
+    @Test
+    void testHandleDragDropMovesPieceAndSwitchesTurn() {
+        gameController.setCurrentTurn(Color.WHITE);
+
+        gameController.handleDragDrop(1, 0, 2, 0);
+
+        assertNull(board.get(new Position(1, 0)), "Source square should be empty after a valid drag-drop move.");
+        assertNotNull(board.get(new Position(2, 0)), "Destination square should contain the dragged piece.");
+        assertEquals(Color.BLACK, gameController.getCurrentTurn(), "Turn should switch after a valid drag-drop move.");
+        assertEquals(1, gameController.getMoveHistory().size(), "Drag-drop move should be recorded in move history.");
+    }
+
+    @Test
+    void testHandleDragDropRejectsInvalidMove() {
+        gameController.setCurrentTurn(Color.WHITE);
+
+        gameController.handleDragDrop(1, 0, 4, 0);
+
+        assertNotNull(board.get(new Position(1, 0)), "Invalid drag-drop should keep the piece on the source square.");
+        assertNull(board.get(new Position(4, 0)), "Invalid drag-drop should not place a piece on the destination square.");
+        assertEquals(Color.WHITE, gameController.getCurrentTurn(), "Invalid drag-drop should not switch turns.");
+        assertTrue(gameController.getMoveHistory().isEmpty(), "Invalid drag-drop should not be recorded.");
+    }
+
+    @Test
+    void testDragDropLockedWhenPaused() {
+        gameController.togglePause();
+
+        assertFalse(gameController.canStartDrag(1, 0), "Paused game should not allow drag start.");
+        gameController.handleDragDrop(1, 0, 2, 0);
+
+        assertNotNull(board.get(new Position(1, 0)), "Paused drag-drop should not move the source piece.");
+        assertNull(board.get(new Position(2, 0)), "Paused drag-drop should leave the destination empty.");
+        assertEquals(Color.WHITE, gameController.getCurrentTurn(), "Paused drag-drop should not switch turns.");
+    }
+
+    @Test
+    void testDragDropLockedDuringAITurn() {
+        Board aiBoard = new Board();
+        GameController aiController = new GameController(aiBoard, null, true);
+        aiController.setCurrentTurn(Color.BLACK);
+
+        assertFalse(aiController.canStartDrag(6, 0), "AI turn should not allow a human drag start.");
+        aiController.handleDragDrop(6, 0, 5, 0);
+
+        assertNotNull(aiBoard.get(new Position(6, 0)), "AI-turn drag-drop should not move the source piece.");
+        assertNull(aiBoard.get(new Position(5, 0)), "AI-turn drag-drop should leave the destination empty.");
+        assertEquals(Color.BLACK, aiController.getCurrentTurn(), "AI-turn drag-drop should not switch turns.");
+    }
+
     /**
      * [UC-UNDO][Test]
      * Kiểm tra chức năng Undo cơ bản có hoạt động chính xác khi có nước đi.

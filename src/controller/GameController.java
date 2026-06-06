@@ -473,6 +473,65 @@ public class GameController {
         }
     }
 
+    public boolean canStartDrag(int row, int col) {
+        if (isPaused || gameEnded || isAITurn() || aiThinking) {
+            return false;
+        }
+
+        Position position = new Position(row, col);
+        if (!position.isValid()) {
+            return false;
+        }
+
+        Piece piece = board.get(position);
+        return piece != null && piece.getColor() == currentTurn;
+    }
+
+    public void previewDragFrom(int row, int col) {
+        if (!canStartDrag(row, col) || view == null) {
+            return;
+        }
+
+        Position from = new Position(row, col);
+        view.resetBoardColors();
+        view.highlightValidMoves(from, board);
+    }
+
+    public void handleDragDrop(int fromRow, int fromCol, int toRow, int toCol) {
+        if (isPaused || gameEnded || isAITurn() || aiThinking) {
+            return;
+        }
+
+        Position from = new Position(fromRow, fromCol);
+        Position to = new Position(toRow, toCol);
+        if (!from.isValid() || !to.isValid()) {
+            selectedPosition = null;
+            if (view != null) {
+                view.resetBoardColors();
+                view.updateBoardGUI();
+            }
+            return;
+        }
+
+        Piece movingPiece = board.get(from);
+        if (movingPiece == null || movingPiece.getColor() != currentTurn) {
+            selectedPosition = null;
+            if (view != null) {
+                view.resetBoardColors();
+                view.updateBoardGUI();
+            }
+            return;
+        }
+
+        selectedPosition = from;
+        processMoveFrom(from, to, true);
+        selectedPosition = null;
+        if (view != null) {
+            view.resetBoardColors();
+            view.updateBoardGUI();
+        }
+    }
+
     /**
      * UC-07: Resign Game (Đầu hàng)
      * Chức năng: Xử lý người chơi đầu hàng, xác nhận hộp thoại và kết thúc.
