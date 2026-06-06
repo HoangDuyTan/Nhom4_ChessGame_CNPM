@@ -9,13 +9,19 @@ public class MoveLog implements Serializable {
     private Piece movedPiece;
     private Piece capturedPiece;
     private Color playerColor;
+    private String promotionChoice;
 
     public MoveLog(Position from, Position to, Piece movedPiece, Piece capturedPiece, Color playerColor) {
+        this(from, to, movedPiece, capturedPiece, playerColor, null);
+    }
+
+    public MoveLog(Position from, Position to, Piece movedPiece, Piece capturedPiece, Color playerColor, String promotionChoice) {
         this.from = from;
         this.to = to;
         this.movedPiece = movedPiece;
         this.capturedPiece = capturedPiece;
         this.playerColor = playerColor;
+        this.promotionChoice = promotionChoice;
     }
     private String convertToNotation(Position pos) {
         if (pos == null) return "??";
@@ -52,5 +58,8 @@ public class MoveLog implements Serializable {
     }
     public Piece getCapturedPiece() {
         return capturedPiece;
+    }
+    public String getPromotionChoice() {
+        return promotionChoice;
     }
 }
