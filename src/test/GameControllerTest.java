@@ -148,6 +148,133 @@ public class GameControllerTest {
 
         assertEquals(0, gameController.getWhiteTimeLeft(), "Thời gian của người chơi bị hiển thị số âm sau khi phạt Undo!");
     }
+    /**
+     * [UC-UNDO][Test]
+     * Kiểm tra giới hạn tối đa số lần Undo của quân TRẮNG.
+     * Đảm bảo hệ thống chặn không cho phép hoàn tác khi vượt quá 3 lần quy định.
+     */
+    @Test
+    void testWhiteMaxThreeUndos() {
+        // Thiết lập ban đầu: Lượt của TRẮNG
+        gameController.setCurrentTurn(Color.WHITE);
+        gameController.setWhiteTimeLeft(180);
+        gameController.setBlackTimeLeft(180);
+
+        // --- Giả lập TRẮNG thực hiện nước đi hợp lệ đầu tiên ---
+        // Lượt TRẮNG đi -> Đổi sang lượt ĐEN -> Undo lúc này tính cho TRẮNG
+        gameController.handleSquareClick(1, 0);
+        gameController.handleSquareClick(2, 0);
+
+        // Thực hiện Undo lần 1 (Hợp lệ: còn 2 lượt)
+        gameController.undo();
+        assertEquals(Color.WHITE, gameController.getCurrentTurn(), "Undo lần 1 thất bại!");
+
+        // --- Giả lập TRẮNG đi nước thứ 2 ---
+        gameController.handleSquareClick(1, 0);
+        gameController.handleSquareClick(2, 0);
+
+        // Thực hiện Undo lần 2 (Hợp lệ: còn 1 lượt)
+        gameController.undo();
+
+        // --- Giả lập TRẮNG đi nước thứ 3 ---
+        gameController.handleSquareClick(1, 0);
+        gameController.handleSquareClick(2, 0);
+
+        // Thực hiện Undo lần 3 (Hợp lệ: còn 0 lượt)
+        gameController.undo();
+
+        // --- Giả lập TRẮNG đi nước thứ 4 ---
+        gameController.handleSquareClick(1, 0);
+        gameController.handleSquareClick(2, 0);
+
+        // Ghi lại trạng thái trước khi cố tình Undo lần 4
+        Color turnBeforeFailedUndo = gameController.getCurrentTurn(); // Hiện tại phải là BLACK
+
+        // Thực hiện Undo lần 4 (Không hợp lệ: Hệ thống phải chặn lại và giữ nguyên trạng thái)
+        gameController.undo();
+
+        // Kiểm tra xem lượt chơi có bị hoàn tác hay không. Nếu bị chặn, lượt vẫn phải giữ nguyên là BLACK
+        assertEquals(turnBeforeFailedUndo, gameController.getCurrentTurn(),
+                "Quân TRẮNG đã dùng quá 3 lần Undo nhưng hệ thống không chặn lại!");
+    }
+
+    /**
+     * [UC-UNDO][Test]
+     * Kiểm tra giới hạn tối đa số lần Undo của quân ĐEN.
+     * Đảm bảo hệ thống chặn không cho phép hoàn tác khi vượt quá 3 lần quy định.
+     */
+    @Test
+    void testBlackMaxThreeUndos() {
+        // Thiết lập ban đầu: Để ĐEN đi thì TRẮNG phải đi trước 1 nước
+        gameController.setCurrentTurn(Color.WHITE);
+        gameController.handleSquareClick(1, 0);
+        gameController.handleSquareClick(2, 0); // Bàn cờ chuyển sang lượt ĐEN
+
+        // Giả lập ĐEN đi quân (ví dụ Tốt đen từ ô 6,0 sang 5,0)
+        // Lượt ĐEN đi -> Đổi sang lượt TRẮNG -> Undo lúc này tính cho ĐEN
+
+        // Lần 1
+        gameController.handleSquareClick(6, 0);
+        gameController.handleSquareClick(5, 0);
+        gameController.undo(); // Undo hợp lệ (ĐEN còn 2 lần)
+
+        // Lần 2
+        gameController.handleSquareClick(6, 0);
+        gameController.handleSquareClick(5, 0);
+        gameController.undo(); // Undo hợp lệ (ĐEN còn 1 lượt)
+
+        // Lần 3
+        gameController.handleSquareClick(6, 0);
+        gameController.handleSquareClick(5, 0);
+        gameController.undo(); // Undo hợp lệ (ĐEN còn 0 lượt)
+
+        // Lần 4 (Quá giới hạn)
+        gameController.handleSquareClick(6, 0);
+        gameController.handleSquareClick(5, 0); // Đi quân lần nữa, lượt chuyển sang WHITE
+
+        Color turnBeforeFailedUndo = gameController.getCurrentTurn(); // Phải là WHITE
+
+        gameController.undo(); // Cố tình gọi Undo lần 4, hệ thống phải từ chối hành động
+
+        assertEquals(turnBeforeFailedUndo, gameController.getCurrentTurn(),
+                "Quân ĐEN đã dùng quá 3 lần Undo nhưng hệ thống không chặn lại!");
+    }
+
+    /**
+     * [UC-UNDO][Test]
+     * Kiểm tra khôi phục số lượt Undo khi làm mới bàn đấu (Chơi lại ván mới).
+     * Đảm bảo số lần Undo của cả hai bên được làm mới đầy đủ về mốc 3 lần sau khi hệ thống Khởi động lại.
+     */
+    @Test
+    void testUndoCountResetOnRestart() {
+        // Thiết lập ban đầu: Lượt của TRẮNG
+        gameController.setCurrentTurn(Color.WHITE);
+
+        // TRẮNG thực hiện đi quân rồi dùng hết 1 lần Undo
+        gameController.handleSquareClick(1, 0);
+        gameController.handleSquareClick(2, 0);
+        gameController.undo();
+
+        // Kích hoạt tính năng chơi lại ván mới
+        gameController.restartGame();
+
+        // Sau khi restart, đi quân lại lần nữa
+        gameController.handleSquareClick(1, 0);
+        gameController.handleSquareClick(2, 0);
+
+        // Thử thực hiện Undo liên tiếp 3 lần xem có được phục hồi đầy đủ hay không
+        assertDoesNotThrow(() -> {
+            gameController.undo(); // Lần 1 sau khi restart
+
+            gameController.handleSquareClick(1, 0);
+            gameController.handleSquareClick(2, 0);
+            gameController.undo(); // Lần 2 sau khi restart
+
+            gameController.handleSquareClick(1, 0);
+            gameController.handleSquareClick(2, 0);
+            gameController.undo(); // Lần 3 sau khi restart
+        }, "Lượt dùng Undo chưa được reset về 3 sau khi bấm Chơi Mới (Restart)!");
+    }
 
     /**
      * [Test Đóng Gói Bit]
