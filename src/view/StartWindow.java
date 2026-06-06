@@ -75,30 +75,15 @@ public class StartWindow extends JFrame {
             }
         });
 
+        JButton guideButton = new JButton("HƯỚNG DẪN");
         JButton aiButton = new JButton("CHƠI VỚI MÁY");
         styleButton(aiButton);
         aiButton.addActionListener(e -> {
-            if (SaveManager.hasSaveFile(true)) {
-                Object[] options = {"Tiếp tục ván AI", "Tạo ván AI mới", "Hủy"};
-                int n = JOptionPane.showOptionDialog(this,
-                        "Bạn có một ván chơi với máy chưa hoàn thành.",
-                        "Thông báo",
-                        JOptionPane.YES_NO_CANCEL_OPTION,
-                        JOptionPane.QUESTION_MESSAGE,
-                        null, options, options[0]);
-
-                if (n == JOptionPane.YES_OPTION) {
-                    runAIGame(true);
-                } else if (n == JOptionPane.NO_OPTION) {
-                    SaveManager.deleteSaveFile(true);
-                    runAIGame(false);
-                }
-            } else {
-                runAIGame(false);
-            }
+            SaveManager.deleteSaveFile();
+            new GameWindow(true);
+            dispose();
         });
 
-        JButton guideButton = new JButton("HƯỚNG DẪN");
         styleButton(guideButton);
         guideButton.addActionListener(e -> {
             JOptionPane.showMessageDialog(this,
@@ -167,19 +152,6 @@ public class StartWindow extends JFrame {
             Board currentBoard = gameWindow.getBoard();
             GameController controller = gameWindow.getController();
             SaveLoadController.loadGame(currentBoard, controller);
-            gameWindow.updateBoardGUI();
-        }
-        gameWindow.setVisible(true);
-    }
-
-    private void runAIGame(boolean isResume) {
-        this.dispose();
-        GameWindow gameWindow = new GameWindow(true);
-
-        if (isResume) {
-            Board currentBoard = gameWindow.getBoard();
-            GameController controller = gameWindow.getController();
-            SaveLoadController.loadGame(currentBoard, controller, true);
             gameWindow.updateBoardGUI();
         }
         gameWindow.setVisible(true);

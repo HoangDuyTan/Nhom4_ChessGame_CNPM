@@ -28,10 +28,6 @@ public class Pawn extends Piece {
             if (target != null && target.getColor() != this.color) {
                 return true;
             }
-            Position enPassant = board.getEnPassantTarget();
-            if (enPassant != null && enPassant.equals(to) && board.canCaptureEnPassant(from, to, color)) {
-                return true;
-            }
         }
         return false;
     }

@@ -15,9 +15,6 @@ public class King extends Piece {
         if (rowDiff <= 1 && colDiff <= 1) {
             return target == null || target.getColor() != this.color;
         }
-        if (!hasMoved && rowDiff == 0 && colDiff == 2) {
-            return board.canCastle(from, to, color);
-        }
         return false;
     }
 }
