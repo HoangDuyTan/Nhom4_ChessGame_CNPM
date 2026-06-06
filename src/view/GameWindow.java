@@ -198,7 +198,6 @@ public class GameWindow extends JFrame {
         }
 
         // --- BẮT ĐẦU: GIAO DIỆN ĐỒNG HỒ ĐÔI ---
-        if (!playWithAI) {
         JPanel blackTimerPanel = new JPanel();
         blackTimerPanel.setBackground(CONTROL_PANEL_BG);
         blackTimerPanel.setBorder(BorderFactory.createTitledBorder("Thời gian ĐEN"));
@@ -217,7 +216,6 @@ public class GameWindow extends JFrame {
         rightPanel.add(Box.createVerticalStrut(15));
         rightPanel.add(whiteTimerPanel);
         rightPanel.add(Box.createVerticalStrut(20));
-        }
         // --- KẾT THÚC: GIAO DIỆN ĐỒNG HỒ ĐÔI ---
 
         add(rightPanel, BorderLayout.EAST);
@@ -306,10 +304,6 @@ public class GameWindow extends JFrame {
     }
 
     public void updateTimer(int whiteSeconds, int blackSeconds, Color currentTurn) {
-        if (whiteTimerLabel == null || blackTimerLabel == null) {
-            return;
-        }
-
         int wMin = whiteSeconds / 60;
         int wSec = whiteSeconds % 60;
         whiteTimerLabel.setText(String.format("%02d:%02d", wMin, wSec));
