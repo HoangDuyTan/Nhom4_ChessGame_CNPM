@@ -9,8 +9,8 @@ import java.util.List;
 import java.awt.*;
 
 public class SaveLoadController {
-    public static void loadGame(Board board, GameController controller) {
-        SaveGameData data = SaveManager.loadGameData();
+    public static void loadGame(Board board, GameController controller,boolean playWithAI) {
+        SaveGameData data = SaveManager.loadGameData(playWithAI);
         if(data == null) return;
         board.reset();
         controller.clearHistory();
@@ -28,7 +28,7 @@ public class SaveLoadController {
      * Chức năng: Điều phối luồng dữ liệu trung gian phục vụ lưu trữ tự động.
      * Tương ứng mã Use Case gốc: UC-04.1 (Tự động lưu ván đấu).
      */
-    public static void autoSave(Color turn, int secondsElapsed, List<MoveLog> moves) {
-        SaveManager.saveGameData(turn, secondsElapsed, moves);
+    public static void autoSave(Color turn, int secondsElapsed, List<MoveLog> moves,boolean playWithAI) {
+        SaveManager.saveGameData(turn, secondsElapsed, moves,playWithAI);
     }
 }
