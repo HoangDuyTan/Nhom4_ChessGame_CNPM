@@ -1,27 +1,20 @@
 package model;
 
 import java.awt.Color;
-import java.io.Serializable;
 
-public class MoveLog implements Serializable {
+public class MoveLog {
     private Position from;
     private Position to;
     private Piece movedPiece;
     private Piece capturedPiece;
     private Color playerColor;
-    private String promotionChoice;
 
     public MoveLog(Position from, Position to, Piece movedPiece, Piece capturedPiece, Color playerColor) {
-        this(from, to, movedPiece, capturedPiece, playerColor, null);
-    }
-
-    public MoveLog(Position from, Position to, Piece movedPiece, Piece capturedPiece, Color playerColor, String promotionChoice) {
         this.from = from;
         this.to = to;
         this.movedPiece = movedPiece;
         this.capturedPiece = capturedPiece;
         this.playerColor = playerColor;
-        this.promotionChoice = promotionChoice;
     }
     private String convertToNotation(Position pos) {
         if (pos == null) return "??";
@@ -53,13 +46,4 @@ public class MoveLog implements Serializable {
     public Position getFrom() { return from; }
     public Position getTo() { return to; }
     public Color getPlayerColor() { return playerColor; }
-    public Piece getMovedPiece() {
-        return movedPiece;
-    }
-    public Piece getCapturedPiece() {
-        return capturedPiece;
-    }
-    public String getPromotionChoice() {
-        return promotionChoice;
-    }
 }

@@ -29,7 +29,7 @@ public class Pawn extends Piece {
                 return true;
             }
             Position enPassant = board.getEnPassantTarget();
-            if (enPassant != null && enPassant.equals(to) && board.canCaptureEnPassant(from, to, color)) {
+            if (enPassant != null && enPassant.equals(to)) {
                 return true;
             }
         }

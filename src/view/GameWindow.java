@@ -10,10 +10,8 @@ import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
 import java.io.File;
-import java.util.ArrayList;
 
 public class GameWindow extends JFrame {
     private Board board;
@@ -34,25 +32,11 @@ public class GameWindow extends JFrame {
     private JButton pauseButton;
     private JLayeredPane layeredPane;
     private JPanel pauseOverlay;
-    private JPanel boardPanel;
-    private Position dragStartPosition;
-    private boolean draggingPiece;
-    private JPanel rightPanel;
-    private JPanel rowLabels;
-    private JPanel colLabels;
-    private JLabel titleLabel;
-    private java.util.List<JButton> controlButtons = new ArrayList<>();
 
     public GameWindow() {
-        this(false);
-    }
-
-    public GameWindow(boolean playWithAI) {
         this.board = new Board();
-        this.controller = new GameController(this.board, this, playWithAI);
-        SoundManager.setSoundEnabled(
-                SoundConfig.load()
-        );
+        this.controller = new GameController(this.board, this);
+        SoundManager.setSoundEnabled( SoundConfig.load());
         setTitle("CỜ VUA");
         setSize(1000, 700);
         setMinimumSize(new Dimension(850, 650));
@@ -61,7 +45,7 @@ public class GameWindow extends JFrame {
         setLayout(new BorderLayout(10, 0));
         JPanel mainBoardContainer = new JPanel(new BorderLayout(5, 5));
         mainBoardContainer.setBackground(CONTROL_PANEL_BG);
-        boardPanel = new JPanel(new GridLayout(8, 8));
+        JPanel boardPanel = new JPanel(new GridLayout(8, 8));
         for (int r = 7; r >= 0; r--) {
             for (int c = 0; c < 8; c++) {
                 JButton square = new JButton();
@@ -81,13 +65,12 @@ public class GameWindow extends JFrame {
                 square.addActionListener(e -> {
                     controller.handleSquareClick(row, col);
                 });
-                installDragAndDrop(square, row, col);
                 boardPanel.add(square);
             }
         }
 
         boardPanel.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 3));
-        rowLabels = new JPanel(new GridLayout(8, 1));
+        JPanel rowLabels = new JPanel(new GridLayout(8, 1));
         rowLabels.setBackground(CONTROL_PANEL_BG);
         rowLabels.setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 5));
         Font labelFont = new Font("Arial", Font.BOLD, 16);
@@ -98,7 +81,7 @@ public class GameWindow extends JFrame {
             label.setForeground(BORDER_COLOR);
             rowLabels.add(label);
         }
-        colLabels = new JPanel(new GridLayout(1, 8));
+        JPanel colLabels = new JPanel(new GridLayout(1, 8));
         colLabels.setBackground(CONTROL_PANEL_BG);
         colLabels.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
 
@@ -137,13 +120,13 @@ public class GameWindow extends JFrame {
         layeredPane.add(pauseOverlay, JLayeredPane.PALETTE_LAYER);
         add(layeredPane, BorderLayout.CENTER);
 
-        rightPanel = new JPanel();
+        JPanel rightPanel = new JPanel();
         rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
         rightPanel.setBackground(CONTROL_PANEL_BG);
         rightPanel.setBorder(BorderFactory.createEmptyBorder(20, 10, 20, 20));
         rightPanel.setPreferredSize(new Dimension(220, 0));
 
-        titleLabel = new JLabel("CHỨC NĂNG");
+        JLabel titleLabel = new JLabel("CHỨC NĂNG");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 20));
         titleLabel.setAlignmentX(CENTER_ALIGNMENT);
         rightPanel.add(titleLabel);
@@ -152,7 +135,6 @@ public class GameWindow extends JFrame {
         String[] buttonNames = {"Quay Lại Menu", "Đi Lại", "Đi Tiếp", "Tạm Dừng", "Đầu Hàng", "Chơi Game Mới", "Cài Đặt"};
         for (String name : buttonNames) {
             JButton btn = new JButton(name);
-            controlButtons.add(btn);
             btn.setFont(new Font("Arial", Font.PLAIN, 16));
             btn.setMaximumSize(new Dimension(190, 45));
             btn.setBackground(BUTTON_COLOR);
@@ -198,13 +180,12 @@ public class GameWindow extends JFrame {
                     controller.togglePause();
                 });
             } else if (name.equals("Đầu Hàng")) {
-                SoundManager.playButton();
                 // (UC-07): Người chơi bấm chọn chức năng "Đầu Hàng" trên giao diện màn hình thi đấu.
+                SoundManager.playButton();
                 btn.addActionListener(e -> {
                     controller.resignGame();
                 });
             } else if (name.equals("Cài Đặt")) {
-                SoundManager.playButton();
                 btn.addActionListener(e -> new SettingWindow(this));
             }
 
@@ -213,87 +194,30 @@ public class GameWindow extends JFrame {
         }
 
         // --- BẮT ĐẦU: GIAO DIỆN ĐỒNG HỒ ĐÔI ---
-        if (!playWithAI) {
-            JPanel blackTimerPanel = new JPanel();
-            blackTimerPanel.setBackground(CONTROL_PANEL_BG);
-            blackTimerPanel.setBorder(BorderFactory.createTitledBorder("Thời gian ĐEN"));
+        JPanel blackTimerPanel = new JPanel();
+        blackTimerPanel.setBackground(CONTROL_PANEL_BG);
+        blackTimerPanel.setBorder(BorderFactory.createTitledBorder("Thời gian ĐEN"));
+        blackTimerLabel = new JLabel("10:00");
+        blackTimerLabel.setFont(new Font("Consolas", Font.BOLD, 28));
+        blackTimerPanel.add(blackTimerLabel);
 
-            blackTimerLabel = new JLabel("10:00");
-            blackTimerLabel.setFont(new Font("Consolas", Font.BOLD, 28));
-            blackTimerPanel.add(blackTimerLabel);
+        JPanel whiteTimerPanel = new JPanel();
+        whiteTimerPanel.setBackground(CONTROL_PANEL_BG);
+        whiteTimerPanel.setBorder(BorderFactory.createTitledBorder("Thời gian TRẮNG"));
+        whiteTimerLabel = new JLabel("10:00");
+        whiteTimerLabel.setFont(new Font("Consolas", Font.BOLD, 28));
+        whiteTimerPanel.add(whiteTimerLabel);
 
-            JPanel whiteTimerPanel = new JPanel();
-            whiteTimerPanel.setBackground(CONTROL_PANEL_BG);
-            whiteTimerPanel.setBorder(BorderFactory.createTitledBorder("Thời gian TRẮNG"));
-
-            whiteTimerLabel = new JLabel("10:00");
-            whiteTimerLabel.setFont(new Font("Consolas", Font.BOLD, 28));
-            whiteTimerPanel.add(whiteTimerLabel);
-
-            rightPanel.add(blackTimerPanel);
-            rightPanel.add(Box.createVerticalStrut(15));
-            rightPanel.add(whiteTimerPanel);
-            rightPanel.add(Box.createVerticalStrut(20));
-        }
+        rightPanel.add(blackTimerPanel);
+        rightPanel.add(Box.createVerticalStrut(15));
+        rightPanel.add(whiteTimerPanel);
+        rightPanel.add(Box.createVerticalStrut(20));
         // --- KẾT THÚC: GIAO DIỆN ĐỒNG HỒ ĐÔI ---
 
         add(rightPanel, BorderLayout.EAST);
         updateBoardGUI();
 
         setVisible(true);
-    }
-
-    private void installDragAndDrop(JButton square, int row, int col) {
-        square.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mousePressed(MouseEvent e) {
-                dragStartPosition = null;
-                draggingPiece = false;
-
-                if (controller.beginDragFrom(row, col)) {
-                    dragStartPosition = new Position(row, col);
-                    draggingPiece = true;
-                    square.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
-                }
-            }
-
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                if (!draggingPiece || dragStartPosition == null) {
-                    return;
-                }
-
-                square.setCursor(Cursor.getDefaultCursor());
-                Position dropPosition = getDropPosition(e);
-                if (dropPosition == null) {
-                    resetBoardColors();
-                } else if (dragStartPosition.equals(dropPosition)) {
-                    resetBoardColors();
-                } else {
-                    controller.handleDragDrop(
-                            dragStartPosition.getR(),
-                            dragStartPosition.getC(),
-                            dropPosition.getR(),
-                            dropPosition.getC()
-                    );
-                }
-
-                dragStartPosition = null;
-                draggingPiece = false;
-            }
-        });
-    }
-
-    private Position getDropPosition(MouseEvent e) {
-        Point boardPoint = SwingUtilities.convertPoint((Component) e.getSource(), e.getPoint(), boardPanel);
-        if (!boardPanel.contains(boardPoint) || boardPanel.getWidth() <= 0 || boardPanel.getHeight() <= 0) {
-            return null;
-        }
-
-        int col = Math.min(7, Math.max(0, boardPoint.x * 8 / boardPanel.getWidth()));
-        int displayedRow = Math.min(7, Math.max(0, boardPoint.y * 8 / boardPanel.getHeight()));
-        int row = 7 - displayedRow;
-        return new Position(row, col);
     }
 
     public void updateBoardGUI() {
@@ -350,14 +274,17 @@ public class GameWindow extends JFrame {
         for (int r = 0; r < 8; r++) {
             for (int c = 0; c < 8; c++) {
                 Position to = new Position(r, c);
-                if (board.isLegalMove(from, to)) {
-                    Piece targetPiece = board.get(to);
-                    if (targetPiece != null) {
-                        chessSquares[r][c].setBackground(CAPTURE_COLOR);
-                    } else {
-                        chessSquares[r][c].setBackground(MOVE_COLOR);
+                if (piece.isValidMove(from, to, board)) {
+                    if (!board.simulateMoveAndCheck(from, to, piece.getColor())) {
+                        Piece targetPiece = board.get(to);
+                        if (targetPiece instanceof King) continue;
+                        if (targetPiece != null) {
+                            chessSquares[r][c].setBackground(CAPTURE_COLOR);
+                        } else {
+                            chessSquares[r][c].setBackground(MOVE_COLOR);
+                        }
+                        chessSquares[r][c].setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
                     }
-                    chessSquares[r][c].setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
                 }
             }
         }
@@ -373,9 +300,6 @@ public class GameWindow extends JFrame {
     }
 
     public void updateTimer(int whiteSeconds, int blackSeconds, Color currentTurn) {
-        if (whiteTimerLabel == null || blackTimerLabel == null) {
-            return;
-        }
         int wMin = whiteSeconds / 60;
         int wSec = whiteSeconds % 60;
         whiteTimerLabel.setText(String.format("%02d:%02d", wMin, wSec));
@@ -396,6 +320,10 @@ public class GameWindow extends JFrame {
         if (blackSeconds <= 30) blackTimerLabel.setForeground(new Color(220, 53, 69));
     }
 
+    /**
+     * UC-05.1 & UC-05.2: Pause/Resume
+     * Chức năng: Cập nhật nút bấm và bật/tắt Overlay che bàn cờ
+     */
     public void updatePauseButton(boolean paused) {
         if (paused) {
             pauseButton.setText("Tiếp Tục");
@@ -419,30 +347,5 @@ public class GameWindow extends JFrame {
 
     public GameController getController() {
         return controller;
-    }
-    public void refreshTheme() {
-
-        DARK_SQUARE_COLOR = Theme.DARK_SQUARE_COLOR;
-        LIGHT_SQUARE_COLOR = Theme.LIGHT_SQUARE_COLOR;
-        BORDER_COLOR = Theme.BORDER_COLOR;
-        CONTROL_PANEL_BG = Theme.CONTROL_PANEL_BG;
-        BUTTON_COLOR = Theme.BUTTON_COLOR;
-
-        resetBoardColors();
-
-        boardPanel.setBorder( BorderFactory.createLineBorder(BORDER_COLOR, 3) );
-
-        rightPanel.setBackground(CONTROL_PANEL_BG);
-        rowLabels.setBackground(CONTROL_PANEL_BG);
-        colLabels.setBackground(CONTROL_PANEL_BG);
-        titleLabel.setForeground(BORDER_COLOR);
-
-        for (JButton btn : controlButtons) {
-            btn.setBackground(BUTTON_COLOR);
-            btn.setForeground(Color.WHITE);
-        }
-
-        repaint();
-        revalidate();
     }
 }

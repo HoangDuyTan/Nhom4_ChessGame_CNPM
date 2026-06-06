@@ -1,11 +1,9 @@
 package model;
 
+import javax.swing.*;
 import java.awt.Color;
 
 public class Board {
-    public static final String DEFAULT_PROMOTION_CHOICE = "Queen";
-    public static final String[] PROMOTION_CHOICES = {"Queen", "Rook", "Bishop", "Knight"};
-
     private Piece[][] grid = new Piece[8][8];
     private Position enPassantTarget = null;
 
@@ -26,15 +24,7 @@ public class Board {
     public Position getEnPassantTarget() {
         return enPassantTarget;
     }
-
-    public void setEnPassantTarget(Position enPassantTarget) {
-        this.enPassantTarget = enPassantTarget;
-    }
-
     public void init() {
-        clear();
-        enPassantTarget = null;
-
         grid[0][0] = new Rook(Color.WHITE);
         grid[0][1] = new Knight(Color.WHITE);
         grid[0][2] = new Bishop(Color.WHITE);
@@ -66,32 +56,43 @@ public class Board {
      * và cập nhật trực tiếp vị trí mới của quân cờ lên ma trận dữ liệu grid[8][8].
      */
     public boolean move(Position from, Position to) {
-        return move(from, to, null);
-    }
-
-    public boolean move(Position from, Position to, String promotionChoice) {
-        if (from == null || to == null || !from.isValid() || !to.isValid()) {
+        Piece piece = get(from);
+        if (piece == null || !piece.getColor().equals(piece.getColor())) return false;
+        if (!piece.isValidMove(from, to, this)) return false;
+        /**
+         * Giai đoạn 2: UC-02.4: Check King Safety (Kiểm tra an toàn của Vua)
+         * Chạy thử nước đi, nếu hành động này khiến Vua tự rơi vào thế bị chiếu -> Báo lỗi nước đi.
+         */
+        if (simulateMoveAndCheck(from, to, piece.getColor())) {
             return false;
         }
-
-        Piece piece = get(from);
-        if (piece == null) return false;
-        if (!isLegalMove(from, to, piece)) return false;
-        boolean castlingMove = isCastlingMove(piece, from, to);
         /**
          * CHỨC NĂNG CHI TIẾT: UC-02.1.4: En passant (Bắt tốt qua đường)
          * Nhánh xử lý: Ăn quân Tốt địch đứng ngang hàng khi quân đó vừa nhảy bước đôi từ vị trí xuất phát.
          */
-        if (isEnPassantMove(from, to, piece)) {
-            Position capturedPawnPosition = getEnPassantCapturedPawnPosition(to, piece.getColor());
-            grid[capturedPawnPosition.getR()][capturedPawnPosition.getC()] = null;
+        if (piece instanceof Pawn) {
+            if (enPassantTarget != null && to.equals(enPassantTarget) && from.getC() != to.getC() && get(to) == null) {
+                int capturedPawnRow = (piece.getColor() == Color.WHITE) ? to.getR() - 1 : to.getR() + 1;
+                grid[capturedPawnRow][to.getC()] = null;
+            }
         }
         /**
          * CHỨC NĂNG CHI TIẾT: UC-02.1.2: Castling (Nhập thành)
          * Nhánh xử lý: Vua di chuyển 2 ô sang ngang và hoán đổi vị trí phòng thủ an toàn cùng quân Xe.
          */
-        if (castlingMove) {
-            moveCastlingRook(from, to);
+        if (piece instanceof King && Math.abs(to.getC() - from.getC()) == 2) {
+            if (to.getC() > from.getC()) {
+                Piece rook = grid[from.getR()][7];
+                grid[from.getR()][5] = rook;
+                grid[from.getR()][7] = null;
+                rook.setMoved(true);
+            }
+            else {
+                Piece rook = grid[from.getR()][0];
+                grid[from.getR()][3] = rook;
+                grid[from.getR()][0] = null;
+                rook.setMoved(true);
+            }
         }
         /**
          * CHỨC NĂNG CHI TIẾT: UC-02.1.1: Capture (Ăn quân thông thường) & Di chuyển ô trống
@@ -107,174 +108,41 @@ public class Board {
         }
         /**
          * CHỨC NĂNG CHI TIẾT: UC-02.1.3: Pawn promotion (Phong cấp tốt)
+         * Nhánh xử lý: Khi quân Tốt tiến đến hàng cuối cùng (Hàng 7 của Trắng, Hàng 0 của Đen).
          */
         if (piece instanceof Pawn) {
-            if (isPromotionRank(piece, to)) {
-                grid[to.getR()][to.getC()] = createPromotedPiece(piece.getColor(), promotionChoice);
+            boolean promote = (piece.getColor() == Color.WHITE && to.getR() == 7) || (piece.getColor() == Color.BLACK && to.getR() == 0);
+            if (promote) {
+                String[] options = {"Queen", "Rook", "Bishop", "Knight"};
+                String choice = (String) JOptionPane.showInputDialog(
+                        null,
+                        "Chọn quân để phong cấp:",
+                        "Pawn Promotion",
+                        JOptionPane.QUESTION_MESSAGE,
+                        null,
+                        options,
+                        options[0]
+                );
+                if (choice == null) {
+                    choice = "Queen";
+                }
+                Color color = piece.getColor();
+                switch (choice) {
+                    case "Rook":
+                        grid[to.getR()][to.getC()] = new Rook(color);
+                        break;
+                    case "Bishop":
+                        grid[to.getR()][to.getC()] = new Bishop(color);
+                        break;
+                    case "Knight":
+                        grid[to.getR()][to.getC()] = new Knight(color);
+                        break;
+                    default:
+                        grid[to.getR()][to.getC()] = new Queen(color);
+                }
             }
         }
         return true;
-    }
-
-    public boolean isPromotionMove(Position from, Position to) {
-        if (from == null || to == null || !from.isValid() || !to.isValid()) {
-            return false;
-        }
-
-        Piece piece = get(from);
-        return piece instanceof Pawn && isPromotionRank(piece, to) && isLegalMove(from, to, piece);
-    }
-
-    public Piece createPromotedPiece(Color color, String promotionChoice) {
-        Piece promotedPiece;
-        switch (normalizePromotionChoice(promotionChoice)) {
-            case "Rook":
-                promotedPiece = new Rook(color);
-                break;
-            case "Bishop":
-                promotedPiece = new Bishop(color);
-                break;
-            case "Knight":
-                promotedPiece = new Knight(color);
-                break;
-            default:
-                promotedPiece = new Queen(color);
-                break;
-        }
-        promotedPiece.setMoved(true);
-        return promotedPiece;
-    }
-
-    public static String normalizePromotionChoice(String promotionChoice) {
-        if (promotionChoice == null) {
-            return DEFAULT_PROMOTION_CHOICE;
-        }
-
-        for (String choice : PROMOTION_CHOICES) {
-            if (choice.equalsIgnoreCase(promotionChoice.trim())) {
-                return choice;
-            }
-        }
-        return DEFAULT_PROMOTION_CHOICE;
-    }
-
-    private boolean isPromotionRank(Piece piece, Position to) {
-        return (piece.getColor() == Color.WHITE && to.getR() == 7)
-                || (piece.getColor() == Color.BLACK && to.getR() == 0);
-    }
-
-    public boolean isLegalMove(Position from, Position to) {
-        if (from == null || to == null || !from.isValid() || !to.isValid()) {
-            return false;
-        }
-
-        Piece piece = get(from);
-        return isLegalMove(from, to, piece);
-    }
-
-    private boolean isLegalMove(Position from, Position to, Piece piece) {
-        if (piece == null || !piece.isValidMove(from, to, this)) {
-            return false;
-        }
-
-        Piece target = get(to);
-        if (target instanceof King) {
-            return false;
-        }
-
-        return isCastlingMove(piece, from, to) || !simulateMoveAndCheck(from, to, piece.getColor());
-    }
-
-    private boolean isCastlingMove(Piece piece, Position from, Position to) {
-        return piece instanceof King
-                && from.getR() == to.getR()
-                && Math.abs(to.getC() - from.getC()) == 2;
-    }
-
-    private void moveCastlingRook(Position from, Position to) {
-        int rookFromCol = to.getC() > from.getC() ? 7 : 0;
-        int rookToCol = to.getC() > from.getC() ? 5 : 3;
-        Piece rook = grid[from.getR()][rookFromCol];
-        grid[from.getR()][rookToCol] = rook;
-        grid[from.getR()][rookFromCol] = null;
-        rook.setMoved(true);
-    }
-
-    public boolean canCastle(Position from, Position to, Color color) {
-        Piece king = get(from);
-        if (!(king instanceof King) || king.getColor() != color || king.hasMoved()) {
-            return false;
-        }
-        if (from.getR() != to.getR() || Math.abs(to.getC() - from.getC()) != 2) {
-            return false;
-        }
-
-        int rookCol = to.getC() > from.getC() ? 7 : 0;
-        int step = to.getC() > from.getC() ? 1 : -1;
-        Piece rook = grid[from.getR()][rookCol];
-        if (!(rook instanceof Rook) || rook.getColor() != color || rook.hasMoved()) {
-            return false;
-        }
-
-        for (int c = from.getC() + step; c != rookCol; c += step) {
-            if (grid[from.getR()][c] != null) {
-                return false;
-            }
-        }
-
-        Color opponentColor = color == Color.WHITE ? Color.BLACK : Color.WHITE;
-        if (isInCheck(color)) {
-            return false;
-        }
-        for (int c = from.getC() + step; c != to.getC() + step; c += step) {
-            if (isSquareAttacked(new Position(from.getR(), c), opponentColor)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    public boolean canCaptureEnPassant(Position from, Position to, Color color) {
-        if (from == null || to == null || color == null || !from.isValid() || !to.isValid()) {
-            return false;
-        }
-
-        if (enPassantTarget == null || !enPassantTarget.equals(to) || get(to) != null) {
-            return false;
-        }
-
-        int direction = color == Color.WHITE ? 1 : -1;
-        if (to.getR() - from.getR() != direction || Math.abs(to.getC() - from.getC()) != 1) {
-            return false;
-        }
-
-        Position capturedPawnPosition = getEnPassantCapturedPawnPosition(to, color);
-        if (capturedPawnPosition == null || !capturedPawnPosition.isValid()) {
-            return false;
-        }
-
-        Piece capturedPawn = get(capturedPawnPosition);
-        return capturedPawn instanceof Pawn && capturedPawn.getColor() != color;
-    }
-
-    public Piece getCapturedPiece(Position from, Position to) {
-        if (from == null || to == null || !from.isValid() || !to.isValid()) {
-            return null;
-        }
-
-        Piece target = get(to);
-        if (target != null) {
-            return target;
-        }
-
-        Piece movingPiece = get(from);
-        if (!isEnPassantMove(from, to, movingPiece)) {
-            return null;
-        }
-
-        Position capturedPawnPosition = getEnPassantCapturedPawnPosition(to, movingPiece.getColor());
-        return get(capturedPawnPosition);
     }
 
     public Position findKing(Color color) {
@@ -292,37 +160,17 @@ public class Board {
     public boolean isInCheck(Color color) {
         Position kingPos = findKing(color);
         if (kingPos == null) return false;
-        Color opponentColor = color == Color.WHITE ? Color.BLACK : Color.WHITE;
-        return isSquareAttacked(kingPos, opponentColor);
-    }
-
-    public boolean isSquareAttacked(Position square, Color attackingColor) {
         for (int r = 0; r < 8; r++) {
             for (int c = 0; c < 8; c++) {
                 Piece p = grid[r][c];
-                if (p != null && p.getColor().equals(attackingColor)) {
-                    if (attacksSquare(p, new Position(r, c), square)) {
+                if (p != null && !p.getColor().equals(color)) {
+                    if (p.isValidMove(new Position(r, c), kingPos, this)) {
                         return true;
                     }
                 }
             }
         }
         return false;
-    }
-
-    private boolean attacksSquare(Piece piece, Position from, Position square) {
-        if (piece instanceof Pawn) {
-            int direction = piece.getColor() == Color.WHITE ? 1 : -1;
-            return square.getR() - from.getR() == direction
-                    && Math.abs(square.getC() - from.getC()) == 1;
-        }
-        if (piece instanceof King) {
-            int rowDiff = Math.abs(from.getR() - square.getR());
-            int colDiff = Math.abs(from.getC() - square.getC());
-            return rowDiff <= 1 && colDiff <= 1 && (rowDiff + colDiff > 0);
-        }
-
-        return piece.isValidMove(from, square, this);
     }
     /**
      * Thuộc bộ chức năng: UC-02.4: Check King Safety (Kiểm tra an toàn của Vua)
@@ -331,32 +179,12 @@ public class Board {
     public boolean simulateMoveAndCheck(Position from, Position to, Color color) {
         Piece originalFrom = grid[from.getR()][from.getC()];
         Piece originalTo = grid[to.getR()][to.getC()];
-        Position enPassantCapturedPawnPosition = null;
-        Piece enPassantCapturedPawn = null;
-        if (isEnPassantMove(from, to, originalFrom)) {
-            enPassantCapturedPawnPosition = getEnPassantCapturedPawnPosition(to, originalFrom.getColor());
-            enPassantCapturedPawn = grid[enPassantCapturedPawnPosition.getR()][enPassantCapturedPawnPosition.getC()];
-            grid[enPassantCapturedPawnPosition.getR()][enPassantCapturedPawnPosition.getC()] = null;
-        }
-
         grid[to.getR()][to.getC()] = originalFrom;
         grid[from.getR()][from.getC()] = null;
         boolean check = isInCheck(color);
         grid[from.getR()][from.getC()] = originalFrom;
         grid[to.getR()][to.getC()] = originalTo;
-        if (enPassantCapturedPawnPosition != null) {
-            grid[enPassantCapturedPawnPosition.getR()][enPassantCapturedPawnPosition.getC()] = enPassantCapturedPawn;
-        }
         return check;
-    }
-
-    private boolean isEnPassantMove(Position from, Position to, Piece piece) {
-        return piece instanceof Pawn && canCaptureEnPassant(from, to, piece.getColor());
-    }
-
-    private Position getEnPassantCapturedPawnPosition(Position to, Color movingColor) {
-        int capturedPawnRow = movingColor == Color.WHITE ? to.getR() - 1 : to.getR() + 1;
-        return new Position(capturedPawnRow, to.getC());
     }
 
     public boolean hasValidMoves(Color color) {
@@ -368,7 +196,7 @@ public class Board {
                     for (int r2 = 0; r2 < 8; r2++) {
                         for (int c2 = 0; c2 < 8; c2++) {
                             Position to = new Position(r2, c2);
-                            if (isLegalMove(from, to)) {
+                            if (p.isValidMove(from, to, this) && !simulateMoveAndCheck(from, to, color)) {
                                 return true;
                             }
                         }
@@ -384,8 +212,11 @@ public class Board {
      * và phân biệt chữ hoa/thường để khởi tạo lại chính xác các đối tượng Piece (King, Queen, Rook...).
      */
     public void loadGame(String[] rows) {
-        clear();
-        enPassantTarget = null;
+        for (int r = 0; r < 8; r++) {
+            for (int c = 0; c < 8; c++) {
+                grid[r][c] = null;
+            }
+        }
 
         for (int r = 0; r < 8; r++) {
             String row = rows[r];
@@ -424,14 +255,12 @@ public class Board {
         }
     }
     public void reset() {
-        init();
-    }
-
-    private void clear() {
         for (int r = 0; r < 8; r++) {
             for (int c = 0; c < 8; c++) {
                 grid[r][c] = null;
             }
         }
+        this.enPassantTarget = null;
+        init();
     }
 }
