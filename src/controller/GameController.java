@@ -83,17 +83,25 @@ public class GameController {
      * Mô tả: Hạ quân cờ xuống vị trí mới, lưu lịch sử, cập nhật bàn cờ và đổi lượt chơi.
      */
     private void processMove(Position destination) {
-        GameState stateBefore = new GameState(board, currentTurn);
+        GameState stateBefore = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
         Piece movingPiece = board.get(selectedPosition);
         Piece targetPiece = board.get(destination);
+
         boolean moved = board.move(selectedPosition, destination);
         if (moved) {
             MoveLog log = new MoveLog(selectedPosition, destination, movingPiece, targetPiece, currentTurn);
             System.out.println("[LỊCH SỬ NƯỚC ĐI] " + log.getStandardNotation());
+
             undoStack.push(stateBefore);
             redoStack.clear();
-            view.updateBoardGUI();
+
+            // AN TOÀN CHO TEST: Chỉ update giao diện nếu view khác null
+            if (view != null) {
+                view.updateBoardGUI();
+            }
+
             checkGameState();
+
             // --- BẮT ĐẦU: CỘNG GIỜ FISCHER VÀ ĐÓNG GÓI BIT ---
             if (currentTurn == Color.WHITE) {
                 whiteTimeLeft += INCREMENT;
@@ -101,24 +109,27 @@ public class GameController {
                 blackTimeLeft += INCREMENT;
             }
 
-            // Đóng gói ngay để hàm AutoSave lưu đúng dữ liệu mới nhất
             this.secondsElapsed = (whiteTimeLeft << 16) | (blackTimeLeft & 0xFFFF);
             // --- KẾT THÚC ---
 
             currentTurn = (currentTurn == Color.WHITE) ? Color.BLACK : Color.WHITE;
-            view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
 
+            if (view != null) {
+                view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
+                view.resetBoardColors();
+            }
             /* * [TRIGGER AUTO-SAVE]: Kích hoạt UC-04.1 (Tự động lưu ván đấu)
              * Chức năng: Đảm bảo tính bền vững dữ liệu ngay sau khi một nước đi hợp lệ được thực hiện xong.
              */
             SaveLoadController.autoSave(currentTurn, board, secondsElapsed);
             selectedPosition = null;
-            view.resetBoardColors();
         } else {
-            String msg = board.isInCheck(currentTurn)
-                    ? "Bạn đang bị chiếu! Hãy chọn nước đi bảo vệ Vua."
-                    : "Nước đi không hợp lệ!";
-            JOptionPane.showMessageDialog(view, msg, "Lỗi di chuyển", JOptionPane.ERROR_MESSAGE);
+            if (view != null) {
+                String msg = board.isInCheck(currentTurn)
+                        ? "Bạn đang bị chiếu! Hãy chọn nước đi bảo vệ Vua."
+                        : "Nước đi không hợp lệ!";
+                JOptionPane.showMessageDialog(view, msg, "Lỗi di chuyển", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
     private void checkGameState() {
@@ -320,8 +331,9 @@ public class GameController {
             this.blackTimeLeft = BASE_TIME;
         }
 
-        view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
-    }
+        if (view != null) {
+            view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
+        }    }
 
     public void undo() {
         // [UC-UNDO - Pre-Conditions & Alternate Flow A1] Kiểm tra điều kiện hoặc stack rỗng
@@ -329,23 +341,19 @@ public class GameController {
 
         // [UC-UNDO - Basic Flow - Bước 1 & 10] Khởi tạo lại trạng thái lựa chọn trên UI
         this.selectedPosition = null;
-        view.resetBoardColors();
+        if (view != null) {
+            view.resetBoardColors();
+        }
 
         // [UC-UNDO - Basic Flow - Bước 9] Đưa nước đi hiện tại vào redo stack trước khi lùi lại
-        GameState currentState = new GameState(board, currentTurn);
+        GameState currentState = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
         redoStack.push(currentState);
 
         // [UC-UNDO - Basic Flow - Bước 4] Lấy trạng thái gần nhất từ history stack (undoStack)
         GameState previousState = undoStack.pop();
 
-        // [UC-UNDO - Basic Flow - Bước 5 & 6] Hoàn tác vị trí quân cờ và khôi phục quân bị bắt (nếu có)
+        // [UC-UNDO - Basic Flow - Bước 5 & 6] Hoàn tác vị trí quân cờ
         previousState.restore(board);
-        for (int r = 0; r < 8; r++) {
-            for (int c = 0; c < 8; c++) {
-                Position pos = new Position(r, c);
-                board.set(pos, previousState.getGrid()[r][c]);
-            }
-        }
 
         // [UC-UNDO - Basic Flow - Bước 7] Chuyển lượt chơi về người đi trước
         this.currentTurn = previousState.getTurn();
@@ -356,11 +364,9 @@ public class GameController {
 
         // --- BẮT ĐẦU: [UC-UNDO - Basic Flow - Bước 8] Trừ 10 giây thời gian của người yêu cầu Undo ---
         if (this.currentTurn == Color.WHITE) {
-            // Nếu sau khi lùi lại là lượt của Trắng -> Trắng chính là người vừa đi và xin Undo
             this.whiteTimeLeft -= 10;
             if (this.whiteTimeLeft < 0) this.whiteTimeLeft = 0;
         } else {
-            // Nếu sau khi lùi lại là lượt của Đen -> Đen chính là người xin Undo
             this.blackTimeLeft -= 10;
             if (this.blackTimeLeft < 0) this.blackTimeLeft = 0;
         }
@@ -369,8 +375,10 @@ public class GameController {
         // --- KẾT THÚC ---
 
         // [UC-UNDO - Basic Flow - Bước 10] Cập nhật giao diện bộ đếm thời gian và bàn cờ
-        view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
-        view.updateBoardGUI();
+        if (view != null) {
+            view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
+            view.updateBoardGUI();
+        }
 
         SaveLoadController.autoSave(currentTurn, board, secondsElapsed);
     }
@@ -381,29 +389,33 @@ public class GameController {
 
         // [UC-REDO - Basic Flow - Bước 1 & 10] Reset trạng thái click chọn cũ trên UI
         this.selectedPosition = null;
-        view.resetBoardColors();
+        if (view != null) {
+            view.resetBoardColors();
+        }
 
         // [UC-REDO - Basic Flow - Bước 8] Đưa trạng thái hiện tại ngược vào history stack (undoStack)
-        GameState currentState = new GameState(board, currentTurn);
+        GameState currentState = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
         undoStack.push(currentState);
 
         // [UC-REDO - Basic Flow - Bước 3] Lấy nước đi kế tiếp từ trong redo stack
         GameState nextState = redoStack.pop();
 
-        // [UC-REDO - Basic Flow - Bước 4, 5, 6] Cập nhật vị trí quân cờ, xử lý quân bị bắt/trạng thái đặc biệt
+        // [UC-REDO - Basic Flow - Bước 4, 5, 6] Cập nhật vị trí quân cờ
         nextState.restore(board);
 
         // [UC-REDO - Basic Flow - Bước 7] Chuyển lượt chơi sang người chơi tiếp theo
         this.currentTurn = nextState.getTurn();
 
-        // [UC-REDO - Basic Flow - Bước 9] Khôi phục lại thời gian và hoàn trả/bù 10 giây đã bị trừ khi Undo
+        // [UC-REDO - Basic Flow - Bước 9] Khôi phục lại thời gian
         this.whiteTimeLeft = nextState.getWhiteTimeLeft();
         this.blackTimeLeft = nextState.getBlackTimeLeft();
         this.secondsElapsed = (this.whiteTimeLeft << 16) | (this.blackTimeLeft & 0xFFFF);
 
         // [UC-REDO - Basic Flow - Bước 10] Cập nhật lại giao diện bàn cờ và đồng hồ
-        view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
-        view.updateBoardGUI();
+        if (view != null) {
+            view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
+            view.updateBoardGUI();
+        }
         SaveLoadController.autoSave(currentTurn, board, secondsElapsed);
     }
     public void restartGame() {

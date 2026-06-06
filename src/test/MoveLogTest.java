@@ -1,96 +1,113 @@
 package test;
 
-import model.*;
-import org.junit.jupiter.api.BeforeEach;
+import model.MoveLog;
+import model.Position;
+import model.Piece;
+import model.Pawn;
+import model.Rook;
+import model.Knight;
+import model.Bishop;
+import model.Queen;
+import model.King;
+
+import java.awt.Color;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import java.awt.Color;
+
+// CHỈ DÙNG DUY NHẤT IMPORT CỦA JUNIT 5 ĐỂ TRÁNH XUNG ĐỘT CÚ PHÁP
 import static org.junit.jupiter.api.Assertions.*;
 
-public class GameStateTest {
+public class MoveLogTest {
 
-    private Board board;
+    /**
+     * [Test]
+     * Kiểm tra định dạng chuỗi ghi chú chuẩn cho nước đi di chuyển bình thường (không ăn quân).
+     * Định dạng mong đợi: "[Phe]: [Tên Quân] [Ô đi] -> [Ô đến]"
+     */
+    @Test
+    @DisplayName("Test định dạng lịch sử nước đi bình thường (Không ăn quân)")
+    void testStandardMoveNotation() {
+        // Thiết lập: Quân Mã Trắng di chuyển từ b1 (0,1) sang c3 (2,2)
+        Position from = new Position(0, 1); // dòng 0, cột 1 tương ứng b1
+        Position to = new Position(2, 2);   // dòng 2, cột 2 tương ứng c3
+        Piece knight = new Knight(Color.WHITE);
 
-    @BeforeEach
-    void setUp() {
-        // Khởi tạo một bàn cờ mới để làm môi trường test
-        board = new Board();
-        board.reset(); // Đưa về trạng thái xếp quân chuẩn
+        MoveLog log = new MoveLog(from, to, knight, null, Color.WHITE);
+
+        // Chuỗi mong muốn kết xuất
+        String expectedNotation = "Trắng: Mã b1 -> c3";
+
+        // JUnit 5 nhận diện đúng: assertEquals(expected, actual, message)
+        assertEquals(expectedNotation, log.getStandardNotation(),
+                "Định dạng chuỗi lịch sử nước di chuyển thông thường của quân Mã chưa chính xác!");
     }
 
     /**
-     * [UC-SNAPSHOT][Test]
-     * Kiểm tra cơ chế "Chụp ảnh bàn cờ" (Board Snapshot Deep Copy).
-     * Đảm bảo GameState tạo ra các thực thể quân cờ mới hoàn toàn độc lập,
-     * chứ không chỉ tham chiếu (reference) tới quân cờ trên bàn cờ thật.
+     * [Test]
+     * Kiểm tra định dạng chuỗi ghi chú chuẩn cho nước đi ăn quân đối phương.
+     * Định dạng mong đợi: "[Phe]: [Tên Quân] [Ô đi] x [Ô đến] (Ăn)"
      */
     @Test
-    @DisplayName("Test GameState chụp ảnh sâu (Deep Copy) trạng thái bàn cờ")
-    void testGameStateDeepCopySnapshot() {
-        Position e2 = new Position(1, 4); // Vị trí Tốt trắng ban đầu
-        Piece originalPawn = board.get(e2);
-        assertNotNull(originalPawn, "Vị trí e2 phải có quân cờ ban đầu");
+    @DisplayName("Test định dạng lịch sử nước đi ăn quân đối phương")
+    void testCaptureMoveNotation() {
+        // Thiết lập: Quân Hậu Đen ở d8 (7,3) ăn một quân của đối phương ở h4 (3,7)
+        Position from = new Position(7, 3); // dòng 7, cột 3 tương ứng d8
+        Position to = new Position(3, 7);   // dòng 3, cột 7 tương ứng h4
+        Piece blackQueen = new Queen(Color.BLACK);
+        Piece capturedPawn = new Pawn(Color.WHITE); // Quân bị ăn là Tốt trắng
 
-        // 1. Tạo bản chụp snapshot GameState tại thời điểm này
-        GameState snapshot = new GameState(board, Color.WHITE, 600, 600);
+        MoveLog log = new MoveLog(from, to, blackQueen, capturedPawn, Color.BLACK);
 
-        // 2. Lấy quân cờ đã được lưu trong bản chụp snapshot
-        Piece snapshottedPawn = snapshot.getGrid()[1][4];
+        // Chuỗi mong muốn kết xuất
+        String expectedNotation = "Đen: Hậu d8 x h4 (Ăn)";
 
-        // 3. XÁC MINH: Quân cờ được copy đúng loại và đúng màu
-        assertNotNull(snapshottedPawn);
-        assertEquals('p', Character.toLowerCase(snapshottedPawn.getShortName()));
-        assertEquals(Color.WHITE, snapshottedPawn.getColor());
-
-        // 4. KIỂM TRA ĐỘC LẬP (Deep Copy):
-        // Thực thể trong snapshot và thực thể trên board phải là 2 đối tượng khác nhau trong vùng nhớ
-        assertNotSame(originalPawn, snapshottedPawn,
-                "Thất bại: GameState chỉ sao chép tham chiếu nông (Shallow Copy), không phải Deep Copy!");
+        // JUnit 5 nhận diện đúng: assertEquals(expected, actual, message)
+        assertEquals(expectedNotation, log.getStandardNotation(),
+                "Định dạng chuỗi lịch sử ăn quân của quân Hậu chưa chính xác!");
     }
 
     /**
-     * [UC-RESTORE][Test]
-     * Kiểm tra cơ chế Khôi phục trạng thái (Restoration).
-     * Đảm bảo khi gọi hàm restore(board), bàn cờ sẽ quay về y hệt trạng thái đã chụp.
+     * [Test]
+     * Kiểm tra tính đúng đắn khi ánh xạ tên viết tắt của tất cả các quân cờ sang tiếng Việt.
      */
     @Test
-    @DisplayName("Test hàm restore khôi phục chính xác thế cờ cũ lên Board")
-    void testGameStateRestoration() {
-        Position a1 = new Position(0, 0); // Vị trí Xe trắng ban đầu
-        Position a2 = new Position(1, 0); // Vị trí Tốt trắng ban đầu
+    @DisplayName("Test ánh xạ chính xác tên tiếng Việt của toàn bộ các loại quân cờ")
+    void testPieceNameMapping() {
+        Position from = new Position(1, 0);
+        Position to = new Position(2, 0);
 
-        // 1. Chụp lại trạng thái lúc bàn cờ còn nguyên vẹn
-        GameState savedState = new GameState(board, Color.WHITE, 500, 450);
+        // 1. Kiểm tra quân Tốt (Pawn)
+        MoveLog pawnLog = new MoveLog(from, to, new Pawn(Color.WHITE), null, Color.WHITE);
+        assertTrue(pawnLog.getStandardNotation().contains("Tốt"), "Chưa ánh xạ đúng tên quân Tốt!");
 
-        // 2. Giả lập làm thay đổi/phá hủy thế cờ trên bàn cờ thật (Xóa quân hoặc di chuyển quân)
-        board.set(a1, null);
-        board.set(a2, null);
-        assertNull(board.get(a1), "Bàn cờ thật đã bị xóa quân Xe");
-        assertNull(board.get(a2), "Bàn cờ thật đã bị xóa quân Tốt");
+        // 2. Kiểm tra quân Xe (Rook)
+        MoveLog rookLog = new MoveLog(from, to, new Rook(Color.WHITE), null, Color.WHITE);
+        assertTrue(rookLog.getStandardNotation().contains("Xe"), "Chưa ánh xạ đúng tên quân Xe!");
 
-        // 3. Thực hiện khôi phục (Restore) từ bản chụp cũ
-        savedState.restore(board);
+        // 3. Kiểm tra quân Tượng (Bishop)
+        MoveLog bishopLog = new MoveLog(from, to, new Bishop(Color.WHITE), null, Color.WHITE);
+        assertTrue(bishopLog.getStandardNotation().contains("Tượng"), "Chưa ánh xạ đúng tên quân Tượng!");
 
-        // 4. XÁC MINH: Các quân cờ bị mất phải được tái tạo lại hoàn hảo trên bàn cờ thật
-        assertNotNull(board.get(a1), "Hàm restore chưa khôi phục được quân Xe tại a1!");
-        assertNotNull(board.get(a2), "Hàm restore chưa khôi phục được quân Tốt tại a2!");
-        assertEquals('r', Character.toLowerCase(board.get(a1).getShortName()));
-        assertEquals('p', Character.toLowerCase(board.get(a2).getShortName()));
+        // 4. Kiểm tra quân Vua (King)
+        MoveLog kingLog = new MoveLog(from, to, new King(Color.WHITE), null, Color.WHITE);
+        assertTrue(kingLog.getStandardNotation().contains("Vua"), "Chưa ánh xạ đúng tên quân Vua!");
     }
 
     /**
-     * [UC-DATA][Test]
-     * Kiểm tra lưu trữ thông tin đi kèm (Turn & Time Log).
+     * [Test Trạng Thái Biên]
+     * Kiểm tra tính an toàn (Robustness): Tránh lỗi sập hệ thống (Crash/NPE) khi dữ liệu truyền vào bị null.
      */
     @Test
-    @DisplayName("Test GameState lưu trữ chính xác lượt đi và quỹ thời gian còn lại")
-    void testGameStateMetadata() {
-        // Tạo snapshot với thông số cụ thể
-        GameState state = new GameState(board, Color.BLACK, 120, 240);
+    @DisplayName("Test xử lý an toàn dữ liệu biên khi Position hoặc Piece bị null")
+    void testNullDataHandling() {
+        // Giả lập tình huống bất định dữ liệu truyền vào bị khuyết thiếu (Null)
+        MoveLog edgeLog = new MoveLog(null, null, null, null, Color.WHITE);
 
-        // Xác minh các thông tin metadata phải được giữ toàn vẹn
-        assertEquals(Color.BLACK, state.getTurn(), "Lưu sai lượt đi!");
-        assertEquals(120, state.getWhiteTimeLeft(), "Lưu sai thời gian Trắng!");
-        assertEquals(240, state.getBlackTimeLeft(), "Lưu sai thời gian Đen!");
+        // Hệ thống phải xử lý mượt mà thay thế bằng ký tự an toàn thay vì tung NullPointerException
+        assertDoesNotThrow(() -> edgeLog.getStandardNotation(),
+                "Hệ thống bị crash tung lỗi tương tác khi log chứa dữ liệu null!");
+
+        String result = edgeLog.getStandardNotation();
+        assertTrue(result.contains("??"), "Khi vị trí null, hệ thống phải hiển thị ký hiệu thay thế '??' để bảo toàn luồng dữ liệu!");
     }
 }
