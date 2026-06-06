@@ -1,8 +1,9 @@
 package model;
 
 import java.awt.Color;
+import java.io.Serializable;
 
-public class MoveLog {
+public class MoveLog implements Serializable {
     private Position from;
     private Position to;
     private Piece movedPiece;
@@ -46,4 +47,10 @@ public class MoveLog {
     public Position getFrom() { return from; }
     public Position getTo() { return to; }
     public Color getPlayerColor() { return playerColor; }
+    public Piece getMovedPiece() {
+        return movedPiece;
+    }
+    public Piece getCapturedPiece() {
+        return capturedPiece;
+    }
 }
