@@ -110,4 +110,47 @@ public class MoveLogTest {
         String result = edgeLog.getStandardNotation();
         assertTrue(result.contains("??"), "Khi vị trí null, hệ thống phải hiển thị ký hiệu thay thế '??' để bảo toàn luồng dữ liệu!");
     }
+    /**
+     * Mục tiêu:
+     * Kiểm tra MoveLog được tạo đúng thông tin
+     * từ vị trí xuất phát và vị trí đích.
+     */
+    @Test
+    public void testCreateMoveLog() {
+        // Tạo lịch sử nước đi
+        MoveLog log = new MoveLog(new Position(1, 4), new Position(3, 4), null, null, Color.WHITE);
+        // Kiểm tra tọa độ hàng của ô xuất phát
+        assertEquals(1, log.getFrom().getR());
+        // Kiểm tra tọa độ cột của ô xuất phát
+        assertEquals(4, log.getFrom().getC());
+        // Kiểm tra tọa độ hàng của ô đích
+        assertEquals(3, log.getTo().getR());
+        // Kiểm tra tọa độ cột của ô đích
+        assertEquals(4, log.getTo().getC());
+    }
+    /**
+     * Mục tiêu:
+     * Kiểm tra hệ thống lưu đúng màu
+     * của người thực hiện nước đi.
+     */
+    @Test
+    public void testStorePlayerColor() {
+        MoveLog log = new MoveLog(new Position(1,4), new Position(3,4), null, null, Color.WHITE);
+        // Kiểm tra màu người chơi được lưu chính xác
+        assertEquals(Color.WHITE, log.getPlayerColor());
+    }
+    /**
+     * Mục tiêu:
+     * Kiểm tra thông tin quân cờ bị ăn
+     * được lưu trong lịch sử nước đi.
+     */
+    @Test
+    public void testCapturedPieceStored() {
+        // Tạo quân đen giả lập bị ăn
+        Piece capturedPiece = new Pawn(Color.BLACK);
+        MoveLog log = new MoveLog(new Position(3,4), new Position(4,3), new Pawn(Color.WHITE), capturedPiece, Color.WHITE);
+        // Kiểm tra thông tin quân bị ăn được lưu vào MoveLog
+        assertNotNull(log.getCapturedPiece()
+        );
+    }
 }

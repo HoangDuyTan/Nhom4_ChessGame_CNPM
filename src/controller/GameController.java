@@ -10,6 +10,8 @@ import view.SoundManager;
 
 import javax.swing.JOptionPane;
 import java.awt.Color;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Stack;
 import javax.swing.Timer;
 
@@ -18,7 +20,7 @@ public class GameController {
     private GameWindow view;
     private Color currentTurn = Color.WHITE;
     private Position selectedPosition = null;
-
+    private List<MoveLog> moveHistory = new ArrayList<>();
     private Timer gameTimer;
     private int secondsElapsed = 0;
     private final int BASE_TIME = 600;
@@ -38,6 +40,9 @@ public class GameController {
         this.view = view;
 
         startTimer();
+    }
+    public List<MoveLog> getMoveHistory() {
+        return moveHistory;
     }
     /**
      * CHỨC NĂNG: UC-02.1: Select Piece (Chọn quân cờ)
@@ -94,6 +99,7 @@ public class GameController {
         SoundManager.playMove();
         if (moved) {
             MoveLog log = new MoveLog(selectedPosition, destination, movingPiece, targetPiece, currentTurn);
+            moveHistory.add(log);
             System.out.println("[LỊCH SỬ NƯỚC ĐI] " + log.getStandardNotation());
 
             undoStack.push(stateBefore);
@@ -125,7 +131,7 @@ public class GameController {
             /* * [TRIGGER AUTO-SAVE]: Kích hoạt UC-04.1 (Tự động lưu ván đấu)
              * Chức năng: Đảm bảo tính bền vững dữ liệu ngay sau khi một nước đi hợp lệ được thực hiện xong.
              */
-            SaveLoadController.autoSave(currentTurn, board, secondsElapsed);
+            SaveLoadController.autoSave(currentTurn, secondsElapsed,moveHistory);
             selectedPosition = null;
         } else {
             if (view != null) {
@@ -402,7 +408,7 @@ public class GameController {
         }
 
         // [TRIGGER AUTO-SAVE]: Đồng bộ tệp tự động lưu sau khi tiến hành Undo
-        SaveLoadController.autoSave(currentTurn, board, secondsElapsed);
+        SaveLoadController.autoSave(currentTurn,secondsElapsed,moveHistory);
     }
     public void redo() {
         // [UC-REDO - Pre-Conditions & Alternate Flow A1] Kiểm tra điều kiện hoặc redo stack rỗng
@@ -439,7 +445,19 @@ public class GameController {
         }
 
         // [TRIGGER AUTO-SAVE]: Đồng bộ dữ liệu tệp lưu tự động sau khi Redo thành công
-        SaveLoadController.autoSave(currentTurn, board, secondsElapsed);
+        SaveLoadController.autoSave(currentTurn, secondsElapsed,moveHistory);
+
+    }
+    public void replayMoveForLoad(Position from, Position to) {
+        GameState stateBefore = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
+        undoStack.push(stateBefore);
+        board.move(from, to);
+        currentTurn = (currentTurn == Color.WHITE) ? Color.BLACK : Color.WHITE;
+    }
+    public void clearHistory() {
+        undoStack.clear();
+        redoStack.clear();
+        moveHistory.clear();
     }
     public void restartGame() {
         this.board.reset();
