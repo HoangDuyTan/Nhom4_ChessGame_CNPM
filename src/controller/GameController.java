@@ -158,6 +158,10 @@ public class GameController {
         }
     }
     private void processMoveFrom(Position from, Position destination, boolean showInvalidMessage) {
+        processMoveFrom(from, destination, null, showInvalidMessage);
+    }
+
+    private void processMoveFrom(Position from, Position destination, String promotionChoice, boolean showInvalidMessage) {
         if (from == null || destination == null || !from.isValid() || !destination.isValid()) {
             return;
         }
@@ -166,7 +170,7 @@ public class GameController {
         Piece movingPiece = board.get(from);
         Piece targetPiece = board.get(destination);
 
-        boolean moved = board.move(from, destination);
+        boolean moved = board.move(from, destination, promotionChoice);
         if (moved) {
             SoundManager.playMove();
             MoveLog log = new MoveLog(from, destination, movingPiece, targetPiece, currentTurn);
@@ -272,7 +276,7 @@ public class GameController {
             return;
         }
 
-        processMoveFrom(bestMove.getFrom(), bestMove.getTo(), false);
+        processMoveFrom(bestMove.getFrom(), bestMove.getTo(), "Queen", false);
     }
 
     private AIMove chooseAIMove() {
@@ -324,12 +328,21 @@ public class GameController {
 
         if (capturedPiece != null) {
             score += pieceValue(capturedPiece) * 10 - pieceValue(movingPiece);
+        } else if (movingPiece instanceof Pawn
+                && board.getEnPassantTarget() != null
+                && board.getEnPassantTarget().equals(to)
+                && from.getC() != to.getC()) {
+            score += pieceValue(new Pawn(currentTurn)) * 10;
+        }
+
+        if (movingPiece instanceof Pawn && (to.getR() == 0 || to.getR() == 7)) {
+            score += pieceValue(new Queen(movingPiece.getColor())) - pieceValue(movingPiece);
         }
 
         score += centerBonus(to);
 
         GameState snapshot = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
-        if (board.move(from, to)) {
+        if (board.move(from, to, "Queen")) {
             Color opponentColor = aiColor == Color.WHITE ? Color.BLACK : Color.WHITE;
             score += evaluateBoardFor(aiColor);
             if (board.isInCheck(opponentColor)) {
