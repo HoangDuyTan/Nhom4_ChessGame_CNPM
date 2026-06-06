@@ -10,6 +10,7 @@ import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
 import java.io.File;
 import java.util.ArrayList;
@@ -40,6 +41,8 @@ public class GameWindow extends JFrame {
     private JPanel colLabels;
     private JLabel titleLabel;
     private java.util.List<JButton> controlButtons = new ArrayList<>();
+    private Position dragStartPosition;
+    private boolean draggingPiece;
 
     public GameWindow() {
         this(false);
@@ -77,6 +80,7 @@ public class GameWindow extends JFrame {
                 square.addActionListener(e -> {
                     controller.handleSquareClick(row, col);
                 });
+                installDragAndDrop(square, row, col);
                 boardPanel.add(square);
             }
         }
@@ -235,6 +239,59 @@ public class GameWindow extends JFrame {
         updateBoardGUI();
 
         setVisible(true);
+    }
+
+    private void installDragAndDrop(JButton square, int row, int col) {
+        square.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                dragStartPosition = null;
+                draggingPiece = false;
+
+                if (controller.canStartDrag(row, col)) {
+                    dragStartPosition = new Position(row, col);
+                    draggingPiece = true;
+                    square.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+                    controller.previewDragFrom(row, col);
+                }
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (!draggingPiece || dragStartPosition == null) {
+                    return;
+                }
+
+                square.setCursor(Cursor.getDefaultCursor());
+                Position dropPosition = getDropPosition(e);
+                if (dropPosition == null) {
+                    resetBoardColors();
+                    updateBoardGUI();
+                } else if (!dragStartPosition.equals(dropPosition)) {
+                    controller.handleDragDrop(
+                            dragStartPosition.getR(),
+                            dragStartPosition.getC(),
+                            dropPosition.getR(),
+                            dropPosition.getC()
+                    );
+                }
+
+                dragStartPosition = null;
+                draggingPiece = false;
+            }
+        });
+    }
+
+    private Position getDropPosition(MouseEvent e) {
+        Point boardPoint = SwingUtilities.convertPoint((Component) e.getSource(), e.getPoint(), boardPanel);
+        if (!boardPanel.contains(boardPoint) || boardPanel.getWidth() <= 0 || boardPanel.getHeight() <= 0) {
+            return null;
+        }
+
+        int col = Math.min(7, Math.max(0, boardPoint.x * 8 / boardPanel.getWidth()));
+        int displayedRow = Math.min(7, Math.max(0, boardPoint.y * 8 / boardPanel.getHeight()));
+        int row = 7 - displayedRow;
+        return new Position(row, col);
     }
 
     public void updateBoardGUI() {
