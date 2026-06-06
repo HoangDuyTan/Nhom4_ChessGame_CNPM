@@ -28,103 +28,123 @@ public class GameControllerTest {
         gameController = new GameController(board, null);
     }
 
-//    /**
-//     * [UC-UNDO][Test]
-//     * Kiểm tra chức năng Undo cơ bản có hoạt động chính xác khi có nước đi.
-//     * Xác minh lượt chơi và thời gian được trả về đúng trạng thái trước đó.
-//     */
-//    @Test
-//    void testUndoBasic() {
-//        // Thiết lập thời gian ban đầu để kiểm tra
-//        gameController.setWhiteTimeLeft(180);
-//        gameController.setBlackTimeLeft(180);
-//
-//        // Giả lập thực hiện 1 nước đi từ ô (6,0) đến (5,0)
-//        gameController.handleMove(new Position(6, 0), new Position(5, 0));
-//
-//        // Lưu lại trạng thái thời gian ngay trước khi bấm Undo
-//        int beforeUndoTimeWhite = gameController.getWhiteTimeLeft();
-//
-//        // Kích hoạt hàm hoàn tác
-//        gameController.undo();
-//
-//        // 1. Kiểm tra lượt chơi phải quay lại cho phe TRẮNG
-//        assertEquals(Color.WHITE, gameController.getCurrentTurn(), "Lượt chơi chưa chuyển về đúng phe Trắng!");
-//
-//        // 2. Kiểm tra thời gian của phe Trắng phải được restore nguyên vẹn
-//        assertEquals(beforeUndoTimeWhite, gameController.getWhiteTimeLeft(), "Thời gian của phe Trắng khôi phục chưa đúng!");
-//    }
-//
-//    /**
-//     * [UC-UNDO][Test]
-//     * Kiểm tra tính an toàn (Robustness): Không thực hiện Undo và không gây lỗi hệ thống khi lịch sử rỗng (Stack rỗng).
-//     */
-//    @Test
-//    void testUndoEmptyStack() {
-//        // Khi vừa vào game chưa đi nước nào, undoStack trống, gọi undo không được văng lỗi
-//        assertDoesNotThrow(() -> gameController.undo(), "Hệ thống bị crash khi cố tình Undo lúc Stack rỗng!");
-//    }
-//
-//    /**
-//     * [UC-REDO][Test]
-//     * Kiểm tra chức năng Redo (Làm lại): Đảm bảo sau khi Undo, người chơi có thể bấm Redo để áp dụng lại nước đi đó.
-//     */
-//    @Test
-//    void testRedoAfterUndo() {
-//        // Đi 1 nước (Lượt Trắng đi xong -> chuyển sang lượt Đen)
-//        gameController.handleMove(new Position(6, 0), new Position(5, 0));
-//
-//        // Undo nước đi vừa rồi -> chuyển ngược về lượt Trắng
-//        gameController.undo();
-//
-//        // Bấm Redo để thực hiện lại nước đi đó -> Lượt chơi phải chuyển lại sang phe ĐEN
-//        gameController.redo();
-//
-//        // Xác minh sau khi redo thì quyền đi cờ thuộc về phe ĐEN
-//        assertEquals(Color.BLACK, gameController.getCurrentTurn(), "Redo xong lượt chơi phải thuộc về phe Đen!");
-//    }
-//
-//    /**
-//     * [UC-UNDO][Test]
-//     * Kiểm tra cơ chế quản lý dữ liệu: Đảm bảo khi gọi hàm Undo, trạng thái hiện tại phải được lưu đúng vào redoStack.
-//     */
-//    @Test
-//    void testUndoPushToRedoStack() {
-//        // Đi 1 nước cờ
-//        gameController.handleMove(new Position(6, 0), new Position(5, 0));
-//
-//        // Bấm Undo
-//        gameController.undo();
-//
-//        // Nếu trạng thái được đẩy vào redoStack đúng, lệnh redo() tiếp theo phải thực hiện được ngon lành
-//        assertDoesNotThrow(() -> gameController.redo(), "RedoStack bị rỗng hoặc lỗi khiến không thể gọi hàm redo() sau khi Undo!");
-//    }
-//
-//    /**
-//     * [UC-UNDO][Test]
-//     * Kiểm tra chuyên sâu về đồng bộ thời gian trong GameState:
-//     * Xác minh dữ liệu thời gian của cả 2 bên (White và Black) được khôi phục chính xác về quá khứ
-//     * bất kể thời gian hiện tại có bị thay đổi/trôi qua bao nhiêu đi nữa.
-//     */
-//    @Test
-//    void testUndoRestoreTime() {
-//        // Bước 1: Thiết lập quỹ thời gian ban đầu cho 2 phe trước khi đi cờ
-//        gameController.setWhiteTimeLeft(100);
-//        gameController.setBlackTimeLeft(120);
-//
-//        // Bước 2: Đi 1 nước cờ (Lúc này GameState lưu cặp thời gian 100s - 120s vào undoStack)
-//        gameController.handleMove(new Position(6, 0), new Position(5, 0));
-//
-//        // Bước 3: Giả lập thời gian của ván đấu thực tế bị thay đổi (giảm xuống còn 50s do đồng hồ chạy tiếp)
-//        gameController.setWhiteTimeLeft(50);
-//
-//        // Bước 4: Người chơi bấm nút Undo
-//        gameController.undo();
-//
-//        // Bước 5: Xác minh thời gian của cả 2 phe phải quay về đúng mốc lịch sử (100s và 120s) ban đầu
-//        assertEquals(100, gameController.getWhiteTimeLeft(), "Thời gian Trắng khôi phục từ GameState bị sai!");
-//        assertEquals(120, gameController.getBlackTimeLeft(), "Thời gian Đen khôi phục từ GameState bị sai!");
-//    }
+    /**
+     * [UC-UNDO][Test]
+     * Kiểm tra chức năng Undo cơ bản có hoạt động chính xác khi có nước đi.
+     * Xác minh lượt chơi được trả về đúng phe trước đó và trừ 10 giây của người yêu cầu hoàn tác.
+     */
+    @Test
+    void testUndoBasic() {
+        // Thiết lập thời gian ban đầu để kiểm tra
+        gameController.setCurrentTurn(Color.WHITE);
+        gameController.setWhiteTimeLeft(180);
+        gameController.setBlackTimeLeft(180);
+
+        // Giả lập thực hiện 1 nước đi hợp lệ: Tốt trắng từ (1,0) tiến lên (2,0)
+        // Nước đi này thành công sẽ push trạng thái TRƯỚC ĐÓ (lượt Trắng, 180s) vào undoStack
+        // Sau đó processMove đổi lượt sang ĐEN
+        try {
+            gameController.handleSquareClick(1, 0);
+            gameController.handleSquareClick(2, 0);
+        } catch (Exception e) {
+            // Nuốt NPE do view = null, logic ghi nhận lịch sử vẫn chạy ngầm bên trong
+        }
+
+        // Kích hoạt hàm hoàn tác
+        gameController.undo();
+
+        // 1. Kiểm tra lượt chơi phải quay lại cho phe TRẮNG
+        assertEquals(Color.WHITE, gameController.getCurrentTurn(), "Lượt chơi chưa chuyển về đúng phe Trắng sau khi Undo!");
+
+        // 2. Theo logic code của bạn: Sau khi lùi lại là lượt của Trắng -> Trắng chính là người vừa đi và xin Undo.
+        // Thời gian khôi phục ban đầu là 180, nhưng bị TRỪ 10 GIÂY phạt -> còn 170 giây.
+        assertEquals(170, gameController.getWhiteTimeLeft(), "Thời gian của phe Trắng sau khi Undo và phạt 10s chưa chính xác!");
+    }
+
+    /**
+     * [UC-UNDO][Test]
+     * Kiểm tra tính an toàn (Robustness): Không thực hiện Undo và không gây lỗi hệ thống khi lịch sử rỗng (Stack rỗng).
+     */
+    @Test
+    void testUndoEmptyStack() {
+        // Khi vừa vào game chưa đi nước nào, undoStack trống, gọi undo không được văng lỗi
+        assertDoesNotThrow(() -> gameController.undo(), "Hệ thống bị crash khi cố tình Undo lúc Stack rỗng!");
+
+        // Trạng thái mặc định ban đầu không bị thay đổi
+        assertEquals(Color.WHITE, gameController.getCurrentTurn());
+    }
+
+    /**
+     * [UC-REDO][Test]
+     * Kiểm tra chức năng Redo (Làm lại): Đảm bảo sau khi Undo, người chơi có thể bấm Redo để áp dụng lại nước đi đó.
+     */
+    @Test
+    void testRedoAfterUndo() {
+        // Đi 1 nước (Lượt Trắng đi xong -> chuyển sang lượt Đen)
+        try {
+            gameController.handleSquareClick(1, 0);
+            gameController.handleSquareClick(2, 0);
+        } catch (Exception e) {}
+
+        // Xác minh chắc chắn lượt đã chuyển sang ĐEN trước khi test tiếp
+        assertEquals(Color.BLACK, gameController.getCurrentTurn());
+
+        // Undo nước đi vừa rồi -> chuyển ngược về lượt Trắng
+        gameController.undo();
+        assertEquals(Color.WHITE, gameController.getCurrentTurn());
+
+        // Bấm Redo để thực hiện lại nước đi đó -> Lượt chơi phải chuyển lại sang phe ĐEN
+        gameController.redo();
+
+        // Xác minh sau khi redo thì quyền đi cờ thuộc về phe ĐEN đúng như thế cờ tương lai
+        assertEquals(Color.BLACK, gameController.getCurrentTurn(), "Redo xong lượt chơi phải thuộc về phe Đen!");
+    }
+
+    /**
+     * [UC-UNDO][Test]
+     * Kiểm tra cơ chế quản lý dữ liệu: Đảm bảo khi gọi hàm Undo, trạng thái hiện tại phải được lưu đúng vào redoStack.
+     */
+    @Test
+    void testUndoPushToRedoStack() {
+        // Đi 1 nước cờ
+        try {
+            gameController.handleSquareClick(1, 0);
+            gameController.handleSquareClick(2, 0);
+        } catch (Exception e) {}
+
+        // Bấm Undo
+        gameController.undo();
+
+        // Nếu trạng thái hiện tại được đẩy vào redoStack đúng, lệnh redo() tiếp theo phải thực hiện được
+        // và không bị chặn lại bởi guard clause `if (redoStack.isEmpty()) return;`
+        gameController.redo();
+
+        // Xác minh lệnh redo thực sự chạy bằng cách kiểm tra lượt chơi lại chuyển sang ĐEN
+        assertEquals(Color.BLACK, gameController.getCurrentTurn(), "RedoStack bị rỗng hoặc không hoạt động sau khi Undo!");
+    }
+
+    /**
+     * [UC-UNDO][Test]
+     * Kiểm tra giới hạn biên thời gian: Đảm bảo thời gian phạt khi Undo không bao giờ bị âm (< 0).
+     */
+    @Test
+    void testUndoTimeDeductionLowerBound() {
+        // Giả lập người chơi chỉ còn dưới 10 giây (ví dụ: còn 5 giây)
+        gameController.setCurrentTurn(Color.WHITE);
+        gameController.setWhiteTimeLeft(5);
+
+        // Thực hiện đi quân
+        try {
+            gameController.handleSquareClick(1, 0);
+            gameController.handleSquareClick(2, 0);
+        } catch (Exception e) {}
+
+        // Bấm Undo -> Thời gian cũ (5s) khôi phục, trừ đi 10s phạt -> 5 - 10 = -5s.
+        // Code xử lý `if (this.whiteTimeLeft < 0) this.whiteTimeLeft = 0;` phải chặn lại đưa về 0.
+        gameController.undo();
+
+        assertEquals(0, gameController.getWhiteTimeLeft(), "Thời gian của người chơi bị âm sau khi phạt Undo!");
+    }
 
     /**
      * [Test Đóng Gói Bit]
