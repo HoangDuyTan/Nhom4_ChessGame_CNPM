@@ -97,8 +97,27 @@ public class SettingWindow extends JFrame {
         
         contentPanel.add(Box.createRigidArea(new Dimension(0, 15)));
 
-        contentPanel.add(createSettingCard("Cài đặt 2", "Mô tả.", createPlaceholderLabel()));
-        contentPanel.add(Box.createRigidArea(new Dimension(0, 15)));
+        JToggleButton soundToggle = new JToggleButton();
+
+        soundToggle.setSelected(SoundManager.isSoundEnabled());
+
+        updateSoundToggleUI(soundToggle);
+
+        soundToggle.addActionListener(e -> {
+
+            boolean enabled = soundToggle.isSelected();
+
+            SoundManager.setSoundEnabled(enabled);
+            SoundConfig.save(enabled);
+
+            updateSoundToggleUI(soundToggle);
+
+            if (enabled) {
+                SoundManager.playButton();
+            }
+        });
+
+        contentPanel.add(createSettingCard("Âm thanh", "Bật hoặc tắt toàn bộ hiệu ứng âm thanh của trò chơi.", soundToggle));
         
         contentPanel.add(createSettingCard("Cài đặt 3", "Mô tả", createPlaceholderLabel()));
         contentPanel.add(Box.createRigidArea(new Dimension(0, 15)));
@@ -187,5 +206,20 @@ public class SettingWindow extends JFrame {
         box.setPreferredSize(new Dimension(200, 38));
         box.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         box.setFocusable(false);
+    }
+    private void updateSoundToggleUI(JToggleButton toggle) {
+
+        if (toggle.isSelected()) {
+            toggle.setText("ON");
+            toggle.setBackground(new Color(40, 167, 69));
+        } else {
+            toggle.setText("OFF");
+            toggle.setBackground(new Color(220, 53, 69));
+        }
+
+        toggle.setForeground(Color.WHITE);
+        toggle.setFocusPainted(false);
+        toggle.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        toggle.setPreferredSize(new Dimension(80, 35));
     }
 }
