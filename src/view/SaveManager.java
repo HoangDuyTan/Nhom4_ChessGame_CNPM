@@ -13,24 +13,32 @@ public class SaveManager {
      * Chức năng: Thực thi tuần tự hóa (Serialization) trạng thái game ra tệp tin cấu hình.
      * Ánh xạ các Use Case phân rã thành phần:
      */
-    public static void saveGameData(Color currentTurn, int secondsElapsed, List<MoveLog> moves,boolean playWithAI) {
+    public static void saveGameData(Color currentTurn, int secondsElapsed,int undoCount,List<MoveLog> moves,boolean playWithAI) {
         String saveFile = playWithAI ? SAVE_FILE_AI : SAVE_FILE;
+        /* UC-04.1.5: Write Save File
+         * Ghi lần lượt Turn, Time, Undo Count và Move History xuống tệp savegame nhằm lưu trạng thái hiện tại của ván đấu.
+         */
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(saveFile))) {
-            /* * MÃ USE CASE: UC-04.1.1 (Trích xuất lượt đi)
-             * Chức năng: Đọc màu của lượt đi hiện tại từ Controller và chuyển đổi thành ký tự W hoặc B.
+            /* UC-04.1.1: Extract Turn
+             * Lấy thông tin lượt chơi hiện tại từ GameController và mã hóa thành W (White) hoặc B (Black)
+             * để lưu vào dòng đầu tiên của file save.
              */
             bw.write(currentTurn == Color.WHITE ? "W" : "B");
             bw.newLine();
 
-            /* * MÃ USE CASE: UC-04.1.2 (Trích xuất thời gian)
-             * Chức năng: Lấy giá trị biến đếm giây secondsElapsed của hệ thống để đồng bộ thời gian thi đấu.
+            /* UC-04.1.2: Extract Time
+             * Trích xuất dữ liệu thời gian trận đấu đã được đóng gói trong biến secondsElapsed để phục vụ khôi phục sau này.
              */
             bw.write(String.valueOf(secondsElapsed));
             bw.newLine();
-
-            /* * MÃ USE CASE: UC-04.1.3 (Trích xuất trạng thái bàn cờ)
-             * Chức năng: Chạy vòng lặp quét qua mảng 2 chiều kích thước 8x8 của Model Board,
-             * mã hóa ngắn tên các thực thể quân cờ (K, Q, R, B, N, P) hoặc dấu '-' nếu ô trống.
+            /* UC-04.1.3: Extract Undo Count
+             * Lấy số lần Undo đã sử dụng trong lượt hiện tại để duy trì đúng giới hạn Undo khi tải lại ván đấu.
+             */
+            bw.write(String.valueOf(undoCount));
+            bw.newLine();
+            /* UC-04.1.4: Extract Move History
+             * Duyệt toàn bộ lịch sử nước đi và chuyển đổi mỗi nước đi thành chuỗi tọa độ from-to
+             * để lưu xuống file save.
              */
             for (MoveLog move : moves) {
                 Position from = move.getFrom();
@@ -49,12 +57,18 @@ public class SaveManager {
     }
     public static SaveGameData loadGameData(boolean playWithAI) {
         String saveFile = playWithAI ? SAVE_FILE_AI : SAVE_FILE;
+        System.out.println(new File(saveFile).getAbsolutePath());
+        /* UC-04.2.1: Read Save Game File
+         * Đọc dữ liệu đã lưu từ tệp savegame
+         * và ánh xạ thành đối tượng SaveGameData.
+         */
         try (BufferedReader br = new BufferedReader(new FileReader(saveFile)))
         {
             SaveGameData data = new SaveGameData();
             String turn = br.readLine();
             data.setTurn(turn.equals("W") ? Color.WHITE : Color.BLACK);
             data.setSecondsElapsed(Integer.parseInt(br.readLine()));
+            data.setUndoCount(Integer.parseInt(br.readLine()));
             String line;
             while ((line = br.readLine()) != null) {
                 data.getMoves().add(line);
@@ -62,9 +76,9 @@ public class SaveManager {
 
             return data;
         } catch (Exception e) {
-            /* * MÃ USE CASE: UC-04.2.4 (Xử lý lỗi tải file)
-             * Chức năng: Bắt ngoại lệ khi không thể đọc file hoặc dữ liệu bị hỏng.
-             * Ghi log lỗi và trả về null để luồng chính rẽ nhánh tạo ván đấu mới an toàn.
+            /* UC-04.2.1.5: Handle Load Error
+             * Bắt ngoại lệ khi file không tồn tại hoặc dữ liệu lỗi.
+             * Trả về null để luồng gọi xử lý an toàn.
              */
             e.printStackTrace();
             return null;

@@ -20,7 +20,7 @@ public class SaveManagerTest {
     @Test
     public void testSaveFileCreated() {
         // Lưu dữ liệu game xuống file
-        SaveManager.saveGameData(Color.WHITE, 100, new ArrayList<>(),false);
+        SaveManager.saveGameData(Color.WHITE, 100,0, new ArrayList<>(),false);
         // Kiểm tra file savegame.txt đã được tạo hay chưa
         assertTrue(SaveManager.hasSaveFile(false));
     }
@@ -32,7 +32,7 @@ public class SaveManagerTest {
     @Test
     public void testLoadGameData() {
         // Ghi dữ liệu mẫu xuống file
-        SaveManager.saveGameData(Color.WHITE, 200, new ArrayList<>(),false);
+        SaveManager.saveGameData(Color.WHITE, 200,0, new ArrayList<>(),false);
         // Đọc dữ liệu từ file
         SaveGameData data = SaveManager.loadGameData(false);
         // Kiểm tra lượt chơi
@@ -50,7 +50,7 @@ public class SaveManagerTest {
      */
     @Test
     void testSaveAIFileCreated() {
-        SaveManager.saveGameData(Color.WHITE, 100,new ArrayList<>(), true);
+        SaveManager.saveGameData(Color.WHITE, 100,0,new ArrayList<>(), true);
         assertTrue(SaveManager.hasSaveFile(true));
     }
     /**
@@ -60,7 +60,7 @@ public class SaveManagerTest {
      */
     @Test
     public void testAILoadGameData() {
-        SaveManager.saveGameData(Color.BLACK, 300, new ArrayList<>(), true);
+        SaveManager.saveGameData(Color.BLACK, 300, 0,new ArrayList<>(), true);
         SaveGameData data = SaveManager.loadGameData(true);
         assertNotNull(data);
         assertEquals(Color.BLACK, data.getTurn());
@@ -80,7 +80,7 @@ public class SaveManagerTest {
         List<MoveLog> moves = new ArrayList<>();
         moves.add(new MoveLog(new Position(6, 4), new Position(4, 4), null, null, Color.WHITE));
         moves.add(new MoveLog(new Position(1, 4), new Position(3, 4), null, null, Color.BLACK));
-        SaveManager.saveGameData(Color.WHITE, 500, moves, true);
+        SaveManager.saveGameData(Color.WHITE, 500,0, moves, true);
         SaveGameData data = SaveManager.loadGameData(true);
         assertNotNull(data);
         assertEquals(2, data.getMoves().size());
