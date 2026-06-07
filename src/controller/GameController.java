@@ -31,6 +31,7 @@ public class GameController {
     private boolean gameEnded = false;
     private Stack<GameState> undoStack = new Stack<>();
     private Stack<GameState> redoStack = new Stack<>();
+    private boolean hasUndoedThisTurn = false;
     private int whiteUndoLeft = 3;
     private int blackUndoLeft = 3;
     private boolean playWithAI = false;
@@ -137,7 +138,7 @@ public class GameController {
             // --- KẾT THÚC ---
 
             currentTurn = (currentTurn == Color.WHITE) ? Color.BLACK : Color.WHITE;
-
+            this.hasUndoedThisTurn = false;
             if (view != null) {
                 view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
                 view.resetBoardColors();
@@ -201,7 +202,6 @@ public class GameController {
 
             this.secondsElapsed = (whiteTimeLeft << 16) | (blackTimeLeft & 0xFFFF);
             currentTurn = (currentTurn == Color.WHITE) ? Color.BLACK : Color.WHITE;
-
             if (view != null) {
                 view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
                 view.resetBoardColors();
@@ -639,14 +639,14 @@ public class GameController {
         if (view != null) {
             view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
         }    }
-
     public void undo() {
-        // [UC-UNDO - Pre-Conditions] & [UC-UNDO - Alternate Flow - A1] Kiểm tra trạng thái ván đấu, tiến trình AI và history stack (Tương đương Bước 2)
+        // [UC-UNDO - Basic Flow - Bước 2] & [UC-UNDO - Alternate Flow - A1]
+        // Kiểm tra điều kiện tiên quyết của ván đấu (Kết thúc, Tạm dừng, AI đang nghĩ, Stack rỗng)
         if (isPaused || gameEnded || undoStack.isEmpty() || aiThinking) return;
 
-        // [UC-UNDO - Basic Flow - Bước 3] Xác định phe vừa đi nước cờ trước đó dựa vào lượt đi hiện tại
+        // [UC-UNDO - Basic Flow - Bước 3] Xác định phe vừa thực hiện nước đi trước đó dựa vào lượt đi hiện tại
         if (currentTurn == Color.BLACK) {
-            // [UC-UNDO - Basic Flow - Bước 4] & [UC-UNDO - Alternate Flow - A2] Kiểm tra giới hạn số lần Undo của quân Trắng (Tối đa 3 lần/ván)
+            // [UC-UNDO - Basic Flow - Bước 4] & [UC-UNDO - Alternate Flow - A2] Kiểm tra số lần Undo còn lại của phe Trắng
             if (whiteUndoLeft <= 0) {
                 JOptionPane.showMessageDialog(view, "Quân TRẮNG đã hết lượt Đi Lại (Tối đa 3 lần)!", "Thông báo", JOptionPane.WARNING_MESSAGE);
                 return;
@@ -654,7 +654,7 @@ public class GameController {
             whiteUndoLeft--;
             System.out.println("[SYSTEM] Trắng vừa dùng 1 lần Undo. Còn lại: " + whiteUndoLeft);
         } else {
-            // [UC-UNDO - Basic Flow - Bước 4] & [UC-UNDO - Alternate Flow - A2] Kiểm tra giới hạn số lần Undo của quân Đen (Tối đa 3 lần/ván)
+            // [UC-UNDO - Basic Flow - Bước 4] & [UC-UNDO - Alternate Flow - A2] Kiểm tra số lần Undo còn lại của phe Đen
             if (blackUndoLeft <= 0) {
                 JOptionPane.showMessageDialog(view, "Quân ĐEN đã hết lượt Đi Lại (Tối đa 3 lần)!", "Thông báo", JOptionPane.WARNING_MESSAGE);
                 return;
@@ -663,23 +663,29 @@ public class GameController {
             System.out.println("[SYSTEM] Đen vừa dùng 1 lần Undo. Còn lại: " + blackUndoLeft);
         }
 
-        // [UC-UNDO - Basic Flow - Bước 6] Giải phóng trạng thái ô cờ đang chọn và xóa toàn bộ màu highlight cũ trên giao diện
+        // [UC-UNDO - Basic Flow - Bước 5] & [UC-UNDO - Alternate Flow - A4] Kiểm tra giới hạn hoàn tác trong một lượt (hasUndoedThisTurn)
+        if (hasUndoedThisTurn) {
+            JOptionPane.showMessageDialog(view, "Bạn chỉ được phép Hoàn tác tối đa 1 lần trong mỗi lượt đi!", "Thông báo", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // [UC-UNDO - Basic Flow - Bước 6] Giải phóng vị trí quân cờ đang chọn dở dang và xóa màu highlight cũ trên giao diện
         this.selectedPosition = null;
         if (view != null) {
             view.resetBoardColors();
         }
 
-        // [UC-UNDO - Basic Flow - Bước 7] Đóng gói trạng thái hiện tại (GameState) và đưa vào redoStack trước khi lùi lại
+        // [UC-UNDO - Basic Flow - Bước 7] Đóng gói trạng thái hiện tại (GameState) rồi đẩy vào redoStack
         GameState currentState = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
         redoStack.push(currentState);
 
         GameState previousState = null;
 
-        // [UC-UNDO - Basic Flow - Bước 8] Phân nhánh xử lý trích xuất dữ liệu dựa theo chế độ chơi
+        // [UC-UNDO - Basic Flow - Bước 8] Phân nhánh kiểm tra chế độ chơi (playWithAI)
         if (playWithAI) {
             // [UC-UNDO - Alternate Flow - A3] Kiểm tra điều kiện biên kích thước history stack cho chế độ chơi với AI
             if (undoStack.size() < 2) {
-                redoStack.pop();
+                redoStack.pop(); // Hủy trạng thái vừa đẩy vào redoStack như đặc tả
                 return;
             }
             GameState aiState = undoStack.pop();
@@ -690,100 +696,119 @@ public class GameController {
                 moveHistory.remove(moveHistory.size() - 1);
             }
         } else {
-            // Trường hợp PvP: Hệ thống lấy 1 trạng thái gần nhất ra khỏi undoStack và xóa bản ghi lịch sử văn bản
+            // Chế độ PvP: Trích xuất 1 trạng thái gần nhất từ undoStack và xóa bản ghi văn bản cuối trong moveHistory
             previousState = undoStack.pop();
-
             if (!moveHistory.isEmpty()) {
                 moveHistory.remove(moveHistory.size() - 1);
             }
         }
 
-        // [UC-UNDO - Basic Flow - Bước 9] Gọi hàm restore(board) từ trạng thái đích của người chơi để khôi phục vị trí các quân cờ
+        // [UC-UNDO - Basic Flow - Bước 9] Gọi hàm khôi phục dữ liệu restore(board) từ trạng thái đích
         previousState.restore(board);
 
-        // [UC-UNDO - Basic Flow - Bước 10] Chuyển lượt chơi (currentTurn) về người vừa thực hiện Undo
+        // [UC-UNDO - Basic Flow - Bước 10] Chuyển lượt chơi (currentTurn) về lại phe vừa thực hiện hoàn tác
         this.currentTurn = previousState.getTurn();
 
-        // [UC-UNDO - Post-Conditions - Success] Khôi phục lại chính xác thời gian của trạng thái cũ trước khi di chuyển
+        // [UC-UNDO - Basic Flow - Bước 11] Khôi phục thời gian gốc của trạng thái cũ
         this.whiteTimeLeft = previousState.getWhiteTimeLeft();
         this.blackTimeLeft = previousState.getBlackTimeLeft();
 
-        // [UC-UNDO - Basic Flow - Bước 11] Áp dụng hình phạt thời gian: Hệ thống kiểm tra thời gian còn lại của phe vừa Undo
+        // [UC-UNDO - Basic Flow - Bước 11] & [Luồng phụ phát sinh] Áp dụng hình phạt trừ 10 giây trực tiếp vào phe vừa Undo
         if (this.currentTurn == Color.WHITE) {
             this.whiteTimeLeft -= 10;
-            if (this.whiteTimeLeft < 0) this.whiteTimeLeft = 0;
+            if (this.whiteTimeLeft <= 0) {
+                this.whiteTimeLeft = 0;
+                handleTimeOut(Color.WHITE); // Gọi luồng xử lý hết giờ nếu thời gian sau trừ <= 0
+                return;
+            }
         } else {
             this.blackTimeLeft -= 10;
-            if (this.blackTimeLeft < 0) this.blackTimeLeft = 0;
+            if (this.blackTimeLeft <= 0) {
+                this.blackTimeLeft = 0;
+                handleTimeOut(Color.BLACK);
+                return;
+            }
         }
 
-        // [UC-UNDO - Basic Flow - Bước 13] & [SR3 (Xử lý thời gian)] Đóng gói lại dữ liệu Bit bộ đếm thời gian
+        // [UC-UNDO - Basic Flow - Bước 12] Thiết lập cờ hiệu khóa chức năng Undo kế tiếp trong lượt này
+        this.hasUndoedThisTurn = true;
+
+        // [UC-UNDO - Basic Flow - Bước 13] Thực hiện đóng gói bit dữ liệu thời gian mới
         this.secondsElapsed = (this.whiteTimeLeft << 16) | (this.blackTimeLeft & 0xFFFF);
 
-        // [UC-UNDO - Basic Flow - Bước 14] Cập nhật lại toàn bộ giao diện hiển thị đồng hồ và bàn cờ đồ họa công khai
+        // [UC-UNDO - Basic Flow - Bước 14] Cập nhật lại toàn bộ giao diện đồ họa hiển thị đồng hồ và bàn cờ
         if (view != null) {
             view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
             view.updateBoardGUI();
         }
 
-        // [UC-UNDO - Basic Flow - Bước 15] Gọi SaveLoadController.autoSave để ghi nhận dữ liệu mới. Kết thúc Use Case.
+        // [UC-UNDO - Biên bổ sung] Kiểm tra lại xem thế cờ sau khi lùi có đang bị chiếu hay không để làm mới UI thông báo
+        checkGameState();
+
+        // [UC-UNDO - Basic Flow - Bước 15] Kích hoạt hàm tự động lưu dữ liệu ván đấu. Kết thúc Use Case.
         SaveLoadController.autoSave(currentTurn, secondsElapsed, moveHistory, playWithAI);
     }
 
     public void redo() {
-        // [UC-REDO - Pre-Conditions] & [UC-REDO - Alternate Flow - A1] Kiểm tra trạng thái ván đấu, AI và redoStack (Tương đương Bước 2)
+        // [UC-REDO - Basic Flow - Bước 2] & [UC-REDO - Alternate Flow - A1]
+        // Kiểm tra điều kiện tiên quyết (Kết thúc, Tạm dừng, AI đang nghĩ, RedoStack rỗng)
         if (isPaused || gameEnded || redoStack.isEmpty() || aiThinking) return;
 
-        // [UC-REDO - Basic Flow - Bước 3] Hủy bỏ vị trí quân đang chọn dở dang và làm sạch màu các ô cờ trên giao diện
+        // [UC-REDO - Basic Flow - Bước 3] Giải phóng vị trí quân cờ đang chọn dở dang và xóa màu highlight cũ trên giao diện
         this.selectedPosition = null;
         if (view != null) {
             view.resetBoardColors();
         }
 
-        // [UC-REDO - Basic Flow - Bước 4] Đóng gói trạng thái hiện tại (GameState) đưa vào undoStack
+        // [UC-REDO - Basic Flow - Bước 4] Đóng gói trạng thái hiện tại (GameState) rồi đẩy ngược vào lại undoStack
         GameState currentState = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
         undoStack.push(currentState);
 
         GameState nextState = null;
 
-        // [UC-REDO - Basic Flow - Bước 5] Phân nhánh xử lý theo chế độ chơi hiện hành
+        // [UC-REDO - Basic Flow - Bước 5] Phân nhánh kiểm tra chế độ chơi (playWithAI)
         if (playWithAI) {
             // [UC-REDO - Alternate Flow - A2] Kiểm tra điều kiện biên kích thước của redoStack cho chế độ đấu với AI
             if (redoStack.size() < 2) {
-                undoStack.pop();
+                undoStack.pop(); // Hủy trạng thái vừa đẩy vào undoStack như đặc tả
                 return;
             }
             GameState playerState = redoStack.pop();
             undoStack.push(playerState);
             nextState = redoStack.pop();
         } else {
-            // Trường hợp PvP: Hệ thống lấy duy nhất 1 trạng thái nước đi kế tiếp ra khỏi redo stack
+            // Chế độ PvP: Lấy ra 1 trạng thái nước đi tiếp theo trực tiếp từ trong redoStack
             nextState = redoStack.pop();
         }
 
-        // [UC-REDO - Basic Flow - Bước 6] Gọi hàm restore(board) từ trạng thái nextState để cập nhật lại vị trí quân cờ
+        // [UC-REDO - Basic Flow - Bước 6] Gọi hàm khôi phục dữ liệu restore(board) từ trạng thái nextState
         nextState.restore(board);
 
-        // [UC-REDO - Basic Flow - Bước 7] Chuyển lượt chơi sang người chơi tiếp theo theo đúng lịch sử ván đấu
+        // [UC-REDO - Basic Flow - Bước 7] Chuyển lượt chơi (currentTurn) sang cho người chơi tiếp theo theo đúng lịch sử
         this.currentTurn = nextState.getTurn();
 
         // [UC-REDO - Basic Flow - Bước 8] Khôi phục lại chính xác thời gian còn lại của hai bên từ trạng thái được gọi ra
         this.whiteTimeLeft = nextState.getWhiteTimeLeft();
         this.blackTimeLeft = nextState.getBlackTimeLeft();
 
-        // [UC-REDO - Basic Flow - Bước 10] & [SR3 (Xử lý thời gian)] Tiến hành đóng gói lại dữ liệu bit mã hóa đồng hồ
+        // [UC-REDO - Basic Flow - Bước 9] Đặt lại trạng thái cờ hiệu giới hạn lượt (mở khóa quyền Undo cho chu kỳ mới)
+        this.hasUndoedThisTurn = false;
+
+        // [UC-REDO - Basic Flow - Bước 10] Tiến hành đóng gói lại dữ liệu bit mã hóa đồng hồ hiện thời
         this.secondsElapsed = (this.whiteTimeLeft << 16) | (this.blackTimeLeft & 0xFFFF);
 
-        // [UC-REDO - Basic Flow - Bước 11] Cập nhật lại giao diện hiển thị đồng hồ và bàn cờ đồ họa công khai
+        // [UC-REDO - Basic Flow - Bước 11] Cập nhật lại toàn bộ giao diện đồ họa hiển thị đồng hồ và bàn cờ công khai
         if (view != null) {
             view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
             view.updateBoardGUI();
         }
 
-        // [UC-REDO - Basic Flow - Bước 12] Gọi hàm SaveLoadController.autoSave để đồng bộ tệp dữ liệu lưu trữ tạm thời. Kết thúc Use Case.
+        // [UC-REDO - Biên bổ sung] Kiểm tra lại trạng thái chiếu/hết cờ của thế cờ mới tiến tới
+        checkGameState();
+
+        // [UC-REDO - Basic Flow - Bước 12] Gọi hàm tự động lưu dữ liệu ván đấu. Kết thúc Use Case.
         SaveLoadController.autoSave(currentTurn, secondsElapsed, moveHistory, playWithAI);
     }
-
 
     public void replayMoveForLoad(Position from, Position to) {
         GameState stateBefore = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
