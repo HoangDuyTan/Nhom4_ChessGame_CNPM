@@ -5,20 +5,20 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 
 public class SettingWindow extends JFrame {
-    private GameWindow gameWindow;
+	private GameWindow gameWindow;
     private static final Color BACKGROUND_COLOR = new Color(28, 30, 33);
     private static final Color CARD_COLOR = new Color(45, 49, 54);
-    private static final Color ACCENT_COLOR = new Color(112, 135, 163);
+    private static final Color ACCENT_COLOR = new Color(112, 135, 163); 
     private static final Color TEXT_COLOR = new Color(230, 230, 230);
     private static final Color BORDER_COLOR = new Color(70, 75, 80);
 
     public SettingWindow(GameWindow gameWindow) {
         this.gameWindow = gameWindow;
         setTitle("CÀI ĐẶT HỆ THỐNG");
-        setSize(750, 600);
+        setSize(750, 600); 
         setLocationRelativeTo(null);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-
+        
         JPanel container = new JPanel(new BorderLayout());
         container.setBackground(BACKGROUND_COLOR);
         container.setBorder(new EmptyBorder(30, 60, 30, 60));
@@ -60,7 +60,8 @@ public class SettingWindow extends JFrame {
         }
         colorBox.addActionListener(e -> {
 
-            String selected = (String) colorBox.getSelectedItem();
+            String selected =
+                    (String) colorBox.getSelectedItem();
 
             switch (selected) {
 
@@ -92,7 +93,7 @@ public class SettingWindow extends JFrame {
             dispose();
         });
         contentPanel.add(createSettingCard("Màu sắc bàn cờ", "Thay đổi tông màu hiển thị của ô cờ và quân cờ.", colorBox));
-
+        
         contentPanel.add(Box.createRigidArea(new Dimension(0, 15)));
 
         JToggleButton soundToggle = new JToggleButton();
@@ -116,10 +117,8 @@ public class SettingWindow extends JFrame {
         });
 
         contentPanel.add(createSettingCard("Âm thanh", "Bật hoặc tắt toàn bộ hiệu ứng âm thanh của trò chơi.", soundToggle));
-        contentPanel.add(Box.createRigidArea(new Dimension(0, 15)));
 
         JToggleButton advancedToggle = new JToggleButton();
-
         advancedToggle.setSelected(GameConfig.isAdvancedMode());
 
         updateAdvancedToggleUI(advancedToggle);
@@ -140,7 +139,7 @@ public class SettingWindow extends JFrame {
                         advancedToggle
                 )
         );
-
+        
         JScrollPane scrollPane = new JScrollPane(contentPanel);
         scrollPane.setBorder(null);
         scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
@@ -155,7 +154,7 @@ public class SettingWindow extends JFrame {
         JButton closeButton = new JButton("Thoát");
         styleButton(closeButton);
         closeButton.addActionListener(e -> dispose());
-
+        
         footerPanel.add(closeButton);
         container.add(footerPanel, BorderLayout.SOUTH);
 
@@ -165,18 +164,21 @@ public class SettingWindow extends JFrame {
     private JPanel createSettingCard(String title, String description, Component control) {
         JPanel card = new JPanel(new GridBagLayout());
         card.setBackground(CARD_COLOR);
-        card.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1), new EmptyBorder(20, 25, 20, 25)));
-
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 110));
+        card.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR, 1),
+            new EmptyBorder(20, 25, 20, 25)
+        ));
+        
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 110)); 
         card.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         GridBagConstraints gbc = new GridBagConstraints();
-
+        
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.weightx = 1.0;
         gbc.fill = GridBagConstraints.HORIZONTAL;
-
+        
         JPanel textPanel = new JPanel(new GridLayout(2, 1, 0, 5));
         textPanel.setOpaque(false);
         JLabel lblTitle = new JLabel(title);
@@ -187,7 +189,7 @@ public class SettingWindow extends JFrame {
         lblDesc.setForeground(new Color(160, 160, 160));
         textPanel.add(lblTitle);
         textPanel.add(lblDesc);
-
+        
         card.add(textPanel, gbc);
 
         gbc.gridx = 1;
@@ -220,7 +222,6 @@ public class SettingWindow extends JFrame {
         box.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         box.setFocusable(false);
     }
-
     private void updateSoundToggleUI(JToggleButton toggle) {
 
         if (toggle.isSelected()) {

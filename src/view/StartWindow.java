@@ -94,6 +94,7 @@ public class StartWindow extends JFrame {
                 runAIGame(false);
             }
         });
+
         styleButton(guideButton);
         guideButton.addActionListener(e -> {
             JOptionPane.showMessageDialog(this,

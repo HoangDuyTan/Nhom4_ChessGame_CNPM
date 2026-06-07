@@ -1,19 +1,14 @@
 package controller;
 
 import model.*;
-import model.GameState;
-import model.Piece;
-import model.Position;
 import view.*;
 
-import javax.swing.JOptionPane;
-import java.awt.Color;
-import java.awt.GraphicsEnvironment;
+import javax.swing.*;
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.Stack;
-import javax.swing.Timer;
 
 public class GameController {
     private Board board;
@@ -28,12 +23,14 @@ public class GameController {
     private int whiteTimeLeft = BASE_TIME;
     private int blackTimeLeft = BASE_TIME;
     private boolean isPaused = false;
-    private boolean hasUndoneThisTurn = false;
 
     private boolean gameEnded = false;
     private Stack<GameState> undoStack = new Stack<>();
     private Stack<GameState> redoStack = new Stack<>();
     private Stack<MoveLog> redoMoveHistory = new Stack<>();
+    private boolean hasUndoedThisTurn = false;
+    private int whiteUndoLeft = 3;
+    private int blackUndoLeft = 3;
     private boolean playWithAI = false;
     private final Color aiColor = Color.BLACK;
     private boolean aiThinking = false;
@@ -49,8 +46,15 @@ public class GameController {
         this.view = view;
         this.playWithAI = playWithAI;
 
-        startTimer();
+        if (!playWithAI) {
+            startTimer();
+        }
     }
+
+    public List<MoveLog> getMoveHistory() {
+        return moveHistory;
+    }
+
     /**
      * CHỨC NĂNG: UC-02.1: Select Piece (Chọn quân cờ)
      * Mô tả: Người chơi chọn một quân cờ của phe mình. Hệ thống kiểm tra lượt đi
@@ -64,17 +68,21 @@ public class GameController {
                 return;
             }
             selectedPosition = clicked;
-            view.resetBoardColors();
+            if (view != null) {
+                view.resetBoardColors();
+            }
             /**
              * CHỨC NĂNG: UC-02.3: Check Available Move (Kiểm tra nước đi có sẵn)
              * Mô tả: Hệ thống tự động tính toán luật đi của quân cờ để highlight các ô đích khả dụng.
              */
             if (!GameConfig.isAdvancedMode()) {
-                view.highlightValidMoves(clicked, board);
+                if (view != null) {
+                    view.highlightValidMoves(clicked, board);
+                }
             }
         }
-
     }
+
     /**
      * CHỨC NĂNG: Điều phối hành động nhấp chuột khi đã có quân cờ được chọn trước đó
      * Mô tả: Phân tách hành vi người chơi dựa trên ô click tiếp theo (Hủy chọn / Đổi quân / Đi quân).
@@ -94,129 +102,147 @@ public class GameController {
             processMove(clicked);
         }
     }
+
     /**
      * CHỨC NĂNG: UC-02.2: Select Destination (Chọn ô đích) & Xử lý di chuyển quân
      * Mô tả: Hạ quân cờ xuống vị trí mới, lưu lịch sử, cập nhật bàn cờ và đổi lượt chơi.
      */
     private void processMove(Position destination) {
-        processMoveFrom(selectedPosition, destination);
-    }
-
-    private boolean processMoveFrom(Position from, Position destination) {
-        return processMoveFrom(from, destination, null, true);
-    }
-    public List<MoveLog> getMoveHistory() {
-        return moveHistory;
-    }
-    private boolean processMoveFrom(Position from, Position destination, String promotionChoice, boolean showInvalidMessage) {
-        if (from == null || destination == null || !from.isValid() || !destination.isValid()) {
-            return false;
-        }
-
         GameState stateBefore = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
-        Piece movingPiece = board.get(from);
-        Piece targetPiece = board.getCapturedPiece(from, destination);
-        boolean promotionMove = board.isPromotionMove(from, destination);
-        String resolvedPromotionChoice = promotionMove
-                ? resolvePromotionChoice(promotionChoice)
-                : null;
-        boolean moved = board.move(from, destination, resolvedPromotionChoice);
+        Piece movingPiece = board.get(selectedPosition);
+        Piece targetPiece = board.get(destination);
+
+        boolean moved = board.move(selectedPosition, destination);
+        SoundManager.playMove();
         if (moved) {
-            SoundManager.playMove();
-            MoveLog log = new MoveLog(from, destination, movingPiece, targetPiece, currentTurn, resolvedPromotionChoice);
+            MoveLog log = new MoveLog(selectedPosition, destination, movingPiece, targetPiece, currentTurn);
             moveHistory.add(log);
             System.out.println("[LỊCH SỬ NƯỚC ĐI] " + log.getStandardNotation());
             undoStack.push(stateBefore);
             redoStack.clear();
             redoMoveHistory.clear();
-            this.undoCount = 0;
-            view.updateBoardGUI();
-            checkGameState();
-            if (gameEnded) {
-                selectedPosition = null;
-                view.resetBoardColors();
-                return true;
+            undoCount = 0;
+            // AN TOÀN CHO TEST: Chỉ update giao diện nếu view khác null
+            if (view != null) {
+                view.updateBoardGUI();
             }
-            /**
-             * CHỨC NĂNG: UC-02.7: Switch Turn (Đổi lượt chơi)
-             * Mô tả: Đảo quyền kiểm soát bàn cờ từ Trắng sang Đen hoặc ngược lại.
-             */
+
+            checkGameState();
+
             // --- BẮT ĐẦU: CỘNG GIỜ FISCHER VÀ ĐÓNG GÓI BIT ---
+            // Cải tiến nhằm phục vụ UC-05.1/UC-05.2: Pause/Resume Game
             if (currentTurn == Color.WHITE) {
                 whiteTimeLeft += INCREMENT;
             } else {
                 blackTimeLeft += INCREMENT;
             }
 
-            // Đóng gói ngay để hàm AutoSave lưu đúng dữ liệu mới nhất
             this.secondsElapsed = (whiteTimeLeft << 16) | (blackTimeLeft & 0xFFFF);
             // --- KẾT THÚC ---
 
             currentTurn = (currentTurn == Color.WHITE) ? Color.BLACK : Color.WHITE;
-            view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
-            this.hasUndoneThisTurn = true;
+            this.hasUndoedThisTurn = false;
+            if (view != null) {
+                view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
+                view.resetBoardColors();
+            }
             /* * [TRIGGER AUTO-SAVE]: Kích hoạt UC-04.1 (Tự động lưu ván đấu)
              * Chức năng: Đảm bảo tính bền vững dữ liệu ngay sau khi một nước đi hợp lệ được thực hiện xong.
              */
-            SaveLoadController.autoSave(currentTurn, secondsElapsed,undoCount,moveHistory,playWithAI);
+            SaveLoadController.autoSave(currentTurn, secondsElapsed,undoCount, moveHistory, playWithAI);
             selectedPosition = null;
-            view.resetBoardColors();
             triggerAIMoveIfNeeded();
-            return true;
-        } else if (showInvalidMessage) {
+        } else {
+            if (view != null) {
+                String msg = board.isInCheck(currentTurn)
+                        ? "Bạn đang bị chiếu! Hãy chọn nước đi bảo vệ Vua."
+                        : "Nước đi không hợp lệ!";
+                JOptionPane.showMessageDialog(view, msg, "Lỗi di chuyển", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void processMoveFrom(Position from, Position destination, boolean showInvalidMessage) {
+        processMoveFrom(from, destination, null, showInvalidMessage);
+    }
+
+    private void processMoveFrom(Position from, Position destination, String promotionChoice, boolean showInvalidMessage) {
+        if (from == null || destination == null || !from.isValid() || !destination.isValid()) {
+            return;
+        }
+
+        GameState stateBefore = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
+        Piece movingPiece = board.get(from);
+        Piece targetPiece = board.get(destination);
+
+        boolean moved = board.move(from, destination, promotionChoice);
+        if (moved) {
+            SoundManager.playMove();
+            MoveLog log = new MoveLog(from, destination, movingPiece, targetPiece, currentTurn);
+            moveHistory.add(log);
+            System.out.println("[Lá»ŠCH Sá»¬ NÆ¯á»šC ÄI] " + log.getStandardNotation());
+
+            undoStack.push(stateBefore);
+            redoStack.clear();
+            undoCount = 0;
+            if (view != null) {
+                view.updateBoardGUI();
+            }
+
+            checkGameState();
+            if (gameEnded) {
+                selectedPosition = null;
+                if (view != null) {
+                    view.resetBoardColors();
+                }
+                return;
+            }
+
+            /**
+             * Mô tả: Cộng thời gian tích lũy (Increment) cho người chơi vừa đi xong,
+             * đóng gói lại thời gian của hai bên vào một biến số nguyên duy nhất (bit-packing),
+             * đổi lượt chơi và cập nhật lại giao diện bàn cờ.
+             */
+            if (currentTurn == Color.WHITE) {
+                whiteTimeLeft += INCREMENT;
+            } else {
+                blackTimeLeft += INCREMENT;
+            }
+
+            this.secondsElapsed = (whiteTimeLeft << 16) | (blackTimeLeft & 0xFFFF);
+            currentTurn = (currentTurn == Color.WHITE) ? Color.BLACK : Color.WHITE;
+            if (view != null) {
+                view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
+                view.resetBoardColors();
+            }
+
+            SaveLoadController.autoSave(currentTurn, secondsElapsed, undoCount,moveHistory, playWithAI);
+            selectedPosition = null;
+            triggerAIMoveIfNeeded();
+        } else if (showInvalidMessage && view != null) {
             String msg = board.isInCheck(currentTurn)
-                    ? "Bạn đang bị chiếu! Hãy chọn nước đi bảo vệ Vua."
+                    ? "Bạn đang bị chiếu! Hãy chọn nước đi để bảo vệ vua"
                     : "Nước đi không hợp lệ!";
             JOptionPane.showMessageDialog(view, msg, "Lỗi di chuyển", JOptionPane.ERROR_MESSAGE);
         }
-        return false;
     }
 
-    private String resolvePromotionChoice(String promotionChoice) {
-        if (promotionChoice != null || GraphicsEnvironment.isHeadless()) {
-            return Board.normalizePromotionChoice(promotionChoice);
-        }
-
-        String choice = (String) JOptionPane.showInputDialog(
-                view,
-                "Chon quan de phong cap:",
-                "Pawn Promotion",
-                JOptionPane.QUESTION_MESSAGE,
-                null,
-                Board.PROMOTION_CHOICES,
-                Board.DEFAULT_PROMOTION_CHOICE
-        );
-        return Board.normalizePromotionChoice(choice);
-    }
-
-    /**
-     * CHỨC NĂNG: UC-02.6: Update Game State (Cập nhật trạng thái trận đấu)
-     * Mô tả: Đánh giá cục diện bàn cờ để phát hiện kịp thời các điều kiện kết thúc game.
-     */
     private void checkGameState() {
         Color opponentColor = (currentTurn == Color.WHITE) ? Color.BLACK : Color.WHITE;
         boolean inCheck = board.isInCheck(opponentColor);
         boolean canMove = board.hasValidMoves(opponentColor);
-        // CHỨC NĂNG: UC-02.6.3: Checkmate (Chiếu bí) -> Đối phương bị chiếu và không còn nước thoát
         if (inCheck && !canMove) {
             gameEnded = true;
             gameTimer.stop();
             SaveManager.deleteSaveFile(playWithAI);
             String winner = (currentTurn == Color.WHITE) ? "Trắng" : "Đen";
-            showGameOverDialog( "CHIẾU HẾT!\n" + winner + " thắng!"
-            );
-        }
-        // CHỨC NĂNG: UC-02.6.2: Stalemate (Hòa cờ) -> Đối phương không bị chiếu nhưng hết nước đi hợp lệ
-        else if (!inCheck && !canMove) {
+            showGameOverDialog("CHIẾU HẾT!\n" + winner + " thắng!");
+        } else if (!inCheck && !canMove) {
             gameEnded = true;
             gameTimer.stop();
             SaveManager.deleteSaveFile(playWithAI);
-            showGameOverDialog(
-                    "HÒA CỜ (Stalemate)!"
-            );
-        }
-        // CHỨC NĂNG: UC-02.6.1: Check (Chiếu tướng) -> Vua đối phương đang nằm trong tầm ngắm của địch
-        else if (inCheck) {
+            showGameOverDialog("HÒA CỜ (Stalemate)!");
+        } else if (inCheck) {
             if (!playWithAI || opponentColor != aiColor) {
                 JOptionPane.showMessageDialog(view, "Đang bị CHIẾU!");
             }
@@ -234,7 +260,9 @@ public class GameController {
 
         aiThinking = true;
         selectedPosition = null;
-        view.resetBoardColors();
+        if (view != null) {
+            view.resetBoardColors();
+        }
 
         Timer aiTimer = new Timer(450, e -> {
             aiThinking = false;
@@ -287,7 +315,8 @@ public class GameController {
                 for (int toRow = 0; toRow < 8; toRow++) {
                     for (int toCol = 0; toCol < 8; toCol++) {
                         Position to = new Position(toRow, toCol);
-                        if (board.isLegalMove(from, to)) {
+                        if (piece.isValidMove(from, to, board)
+                                && !board.simulateMoveAndCheck(from, to, color)) {
                             moves.add(new AIMove(from, to));
                         }
                     }
@@ -301,11 +330,16 @@ public class GameController {
         Position from = move.getFrom();
         Position to = move.getTo();
         Piece movingPiece = board.get(from);
-        Piece capturedPiece = board.getCapturedPiece(from, to);
+        Piece capturedPiece = board.get(to);
         int score = random.nextInt(7);
 
         if (capturedPiece != null) {
             score += pieceValue(capturedPiece) * 10 - pieceValue(movingPiece);
+        } else if (movingPiece instanceof Pawn
+                && board.getEnPassantTarget() != null
+                && board.getEnPassantTarget().equals(to)
+                && from.getC() != to.getC()) {
+            score += pieceValue(new Pawn(currentTurn)) * 10;
         }
 
         if (movingPiece instanceof Pawn && (to.getR() == 0 || to.getR() == 7)) {
@@ -369,6 +403,7 @@ public class GameController {
         return 0;
     }
 
+    // Hàm phụ trợ đếm giờ phục vụ cho chức năng UC-05.1 / UC-05.2: Pause/Resume Game
     private void startTimer() {
         if (gameTimer != null) gameTimer.stop();
 
@@ -379,9 +414,9 @@ public class GameController {
 
                 // Đóng gói dữ liệu truyền đi cho Save Game
                 this.secondsElapsed = (whiteTimeLeft << 16) | (blackTimeLeft & 0xFFFF);
-
-                view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
-
+                if (view != null) {
+                    view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
+                }
                 if (whiteTimeLeft <= 0) handleTimeOut(Color.WHITE);
                 else if (blackTimeLeft <= 0) handleTimeOut(Color.BLACK);
             }
@@ -390,6 +425,7 @@ public class GameController {
         gameTimer.start();
     }
 
+    // Hàm phụ trợ xử lý khi đồng hồ đếm ngược về 0 phục vụ cho chức năng UC-05.1 / UC-05.2: Pause/Resume Game
     private void handleTimeOut(Color loser) {
         gameEnded = true;
         gameTimer.stop();
@@ -397,8 +433,7 @@ public class GameController {
         SaveManager.deleteSaveFile(playWithAI);
 
         String winner = (loser == Color.WHITE) ? "Quân Đen" : "Quân Trắng";
-        showGameOverDialog( "Hết giờ!\n" + winner + " giành chiến thắng."
-        );
+        showGameOverDialog("Hết giờ!\n" + winner + " giành chiến thắng.");
     }
 
     /**
@@ -423,9 +458,13 @@ public class GameController {
 
             // [UC-05.1.2] & [SR2]: Xóa vết quân cờ đang chọn để bảo mật thế trận
             selectedPosition = null;
-            view.resetBoardColors();
-
+            if (view != null) {
+                view.resetBoardColors();
+            }
         } else {
+            /* * MÃ USE CASE: UC-05.2.1 & UC-05.2.3 (Luồng Resume)
+             * Mô tả: Kích hoạt lại updateStateToPlaying. Tiếp tục luồng chạy của Timer.
+             */
             try {
                 gameTimer.start(); // [UC-05.2.3] Tiếp tục đồng hồ
             } catch (Exception e) {
@@ -434,7 +473,9 @@ public class GameController {
         }
 
         // [UC-05.1.4] & [UC-05.2.2]: Cập nhật hiển thị lớp phủ Overlay trên giao diện
-        view.updatePauseButton(isPaused);
+        if (view != null) {
+            view.updatePauseButton(isPaused);
+        }
         triggerAIMoveIfNeeded();
     }
 
@@ -458,7 +499,7 @@ public class GameController {
         }
     }
 
-    public boolean beginDragFrom(int row, int col) {
+    public boolean canStartDrag(int row, int col) {
         if (isPaused || gameEnded || isAITurn() || aiThinking) {
             return false;
         }
@@ -469,17 +510,17 @@ public class GameController {
         }
 
         Piece piece = board.get(position);
-        if (piece == null || piece.getColor() != currentTurn) {
-            return false;
+        return piece != null && piece.getColor() == currentTurn;
+    }
+
+    public void previewDragFrom(int row, int col) {
+        if (!canStartDrag(row, col) || view == null) {
+            return;
         }
 
+        Position from = new Position(row, col);
         view.resetBoardColors();
-
-        if (!GameConfig.isAdvancedMode()) {
-            view.highlightValidMoves(position, board);
-        }
-
-        return true;
+        view.highlightValidMoves(from, board);
     }
 
     public void handleDragDrop(int fromRow, int fromCol, int toRow, int toCol) {
@@ -491,21 +532,29 @@ public class GameController {
         Position to = new Position(toRow, toCol);
         if (!from.isValid() || !to.isValid()) {
             selectedPosition = null;
-            view.resetBoardColors();
+            if (view != null) {
+                view.resetBoardColors();
+                view.updateBoardGUI();
+            }
             return;
         }
 
         Piece movingPiece = board.get(from);
         if (movingPiece == null || movingPiece.getColor() != currentTurn) {
             selectedPosition = null;
-            view.resetBoardColors();
+            if (view != null) {
+                view.resetBoardColors();
+                view.updateBoardGUI();
+            }
             return;
         }
 
+        selectedPosition = from;
+        processMoveFrom(from, to, true);
         selectedPosition = null;
-        boolean moved = processMoveFrom(from, to);
-        if (!moved) {
+        if (view != null) {
             view.resetBoardColors();
+            view.updateBoardGUI();
         }
     }
 
@@ -523,13 +572,11 @@ public class GameController {
                 (currentTurn == Color.WHITE)
                         ? "Trắng"
                         : "Đen";
-
         // (UC-07.4): Hệ thống tự động tính toán xác lập trạng thái kết quả (Đối thủ được xử thắng)
         String winner =
                 (currentTurn == Color.WHITE)
                         ? "Đen"
                         : "Trắng";
-
         /*
          * (UC-07.1) & SR1: Hệ thống hiển thị hộp thoại yêu cầu xác nhận.
          * Nút "Yes" và "No" tách biệt rõ ràng nhờ cấu trúc tiêu chuẩn của JOptionPane.
@@ -540,31 +587,25 @@ public class GameController {
                 "Xác nhận đầu hàng",
                 JOptionPane.YES_NO_OPTION
         );
-
         // (UC-07.2): Người chơi nhấp chọn nút "Yes" để chính thức đầu hàng
         if (choice == JOptionPane.YES_OPTION) {
-
             /*
              * (UC-07.3) & SR2: Kích hoạt luồng "End game", khóa hoàn toàn bàn cờ.
              * Tước bỏ quyền đi quân nhằm ngăn chặn mọi hành vi thay đổi thế cờ.
              */
             gameEnded = true;
-
             // (UC-07.3) & SR2: Dừng tất cả các bộ đếm thời gian của hai bên.
             gameTimer.stop();
-
             /*
              * SR3: Đảm bảo tính toàn vẹn dữ liệu.
              * File savegame.txt bị xóa ngay lập tức để trận đấu kết thúc hoàn toàn.
              */
             SaveManager.deleteSaveFile(playWithAI);
-
             /*
              * (UC-07.5): Hệ thống bật pop-up thông báo tên người thắng cuộc kèm nguyên nhân kết thúc.
              * Ghi chú (UC-07.6): Sau khi bấm OK, bàn đấu giữ nguyên trạng thái đóng băng để người chơi nhìn lại, người chơi có thể tự thao tác "Quay lại Menu" hoặc "Chơi Game Mới" thông qua Menu điều khiển.
              */
-            showGameOverDialog( winner + " thắng do đối thủ đầu hàng!" );
-
+            showGameOverDialog(winner + " thắng do đối thủ đầu hàng!");
             /*
              * Luồng thay thế A1 (UC-07.7) & A2:
              * Nếu chọn "No" hoặc tắt cửa sổ (choice != YES_OPTION), hàm sẽ thoát tại đây.
@@ -573,12 +614,32 @@ public class GameController {
         }
     }
 
+    public Color getCurrentTurn() {
+        return currentTurn;
+    }
+
     public void setCurrentTurn(Color turn) {
         this.currentTurn = turn;
     }
 
     public int getSecondsElapsed() {
         return secondsElapsed;
+    }
+
+    public int getWhiteTimeLeft() {
+        return whiteTimeLeft;
+    }
+
+    public void setWhiteTimeLeft(int whiteTimeLeft) {
+        this.whiteTimeLeft = whiteTimeLeft;
+    }
+
+    public int getBlackTimeLeft() {
+        return blackTimeLeft;
+    }
+
+    public void setBlackTimeLeft(int blackTimeLeft) {
+        this.blackTimeLeft = blackTimeLeft;
     }
 
     public void setSecondsElapsed(int packedSeconds) {
@@ -592,149 +653,254 @@ public class GameController {
             this.blackTimeLeft = BASE_TIME;
         }
 
-        view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
+        if (view != null) {
+            view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
+        }
     }
+
     public void undo() {
         /*
          * [SR3 của UC-05]: Vô hiệu hóa tính năng Hoàn tác trong lúc Tạm dừng.
          * Ngăn chặn người chơi thay đổi trạng thái bàn cờ khi đồng hồ đã đóng băng.
          */
-        if (isPaused || gameEnded || undoStack.isEmpty() || aiThinking) {
+        /*
+         * Giới hạn số lần Hoàn tác tối đa 1 lần mỗi lượt đi.
+         */
+        if (undoCount >= 1) {
+            JOptionPane.showMessageDialog(view, "Bạn đã sử dụng Undo ở lượt hiện tại!", "Thông báo", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        if (this.undoCount > 0) {
-            JOptionPane.showMessageDialog(view,
-                    "Bạn chỉ được phép Lùi lại 1 lần trong 1 nước đi!\nHãy thực hiện nước đi mới hoặc nhấn Tiến lên.",
-                    "Thông báo", JOptionPane.WARNING_MESSAGE);
+
+        // [UC-UNDO - Basic Flow - Bước 2] & [UC-UNDO - Alternate Flow - A1]
+        // Kiểm tra điều kiện tiên quyết của ván đấu (Kết thúc, Tạm dừng, AI đang nghĩ, Stack rỗng)
+        if (isPaused || gameEnded || undoStack.isEmpty() || aiThinking) return;
+
+        // [UC-UNDO - Basic Flow - Bước 3] Xác định phe vừa thực hiện nước đi trước đó dựa vào lượt đi hiện tại
+        if (currentTurn == Color.BLACK) {
+            // [UC-UNDO - Basic Flow - Bước 4] & [UC-UNDO - Alternate Flow - A2] Kiểm tra số lần Undo còn lại của phe Trắng
+            if (whiteUndoLeft <= 0) {
+                JOptionPane.showMessageDialog(view, "Quân TRẮNG đã hết lượt Đi Lại (Tối đa 3 lần)!", "Thông báo", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            whiteUndoLeft--;
+            System.out.println("[SYSTEM] Trắng vừa dùng 1 lần Undo. Còn lại: " + whiteUndoLeft);
+        } else {
+            // [UC-UNDO - Basic Flow - Bước 4] & [UC-UNDO - Alternate Flow - A2] Kiểm tra số lần Undo còn lại của phe Đen
+            if (blackUndoLeft <= 0) {
+                JOptionPane.showMessageDialog(view, "Quân ĐEN đã hết lượt Đi Lại (Tối đa 3 lần)!", "Thông báo", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            blackUndoLeft--;
+            System.out.println("[SYSTEM] Đen vừa dùng 1 lần Undo. Còn lại: " + blackUndoLeft);
+        }
+
+        // [UC-UNDO - Basic Flow - Bước 5] & [UC-UNDO - Alternate Flow - A4] Kiểm tra giới hạn hoàn tác trong một lượt (hasUndoedThisTurn)
+        if (hasUndoedThisTurn) {
+            JOptionPane.showMessageDialog(view, "Bạn chỉ được phép Hoàn tác tối đa 1 lần trong mỗi lượt đi!", "Thông báo", JOptionPane.WARNING_MESSAGE);
             return;
         }
+
+        // [UC-UNDO - Basic Flow - Bước 6] Giải phóng vị trí quân cờ đang chọn dở dang và xóa màu highlight cũ trên giao diện
         this.selectedPosition = null;
-        view.resetBoardColors();
+        if (view != null) {
+            view.resetBoardColors();
+        }
+
+        // [UC-UNDO - Basic Flow - Bước 7] Đóng gói trạng thái hiện tại (GameState) rồi đẩy vào redoStack
         GameState currentState = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
         redoStack.push(currentState);
 
+        GameState previousState = null;
+
+        // [UC-UNDO - Basic Flow - Bước 8] Phân nhánh kiểm tra chế độ chơi (playWithAI)
         if (playWithAI) {
+            // [UC-UNDO - Alternate Flow - A3] Kiểm tra điều kiện biên kích thước history stack cho chế độ chơi với AI
             if (undoStack.size() < 2) {
-                redoStack.pop();
+                redoStack.pop(); // Hủy trạng thái vừa đẩy vào redoStack như đặc tả
                 return;
             }
             GameState aiState = undoStack.pop();
             redoStack.push(aiState);
-            GameState playersPreviousState = undoStack.pop();
+            previousState = undoStack.pop();
             if (!moveHistory.isEmpty()) {
                 redoMoveHistory.push(moveHistory.remove(moveHistory.size() - 1));
             }
             if (!moveHistory.isEmpty()) {
                 redoMoveHistory.push(moveHistory.remove(moveHistory.size() - 1));
             }
-            playersPreviousState.restore(board);
-
-            this.currentTurn = playersPreviousState.getTurn();
-            this.whiteTimeLeft = playersPreviousState.getWhiteTimeLeft();
-            this.blackTimeLeft = playersPreviousState.getBlackTimeLeft();
         } else {
+            // Chế độ PvP: Trích xuất 1 trạng thái gần nhất từ undoStack và xóa bản ghi văn bản cuối trong moveHistory
+            previousState = undoStack.pop();
             if (!moveHistory.isEmpty()) {
                 redoMoveHistory.push(moveHistory.remove(moveHistory.size() - 1));
             }
-            GameState previousState = undoStack.pop();
-            previousState.restore(board);
-
-            this.currentTurn = previousState.getTurn();
-            this.whiteTimeLeft = previousState.getWhiteTimeLeft();
-            this.blackTimeLeft = previousState.getBlackTimeLeft();
         }
 
+        // [UC-UNDO - Basic Flow - Bước 9] Gọi hàm khôi phục dữ liệu restore(board) từ trạng thái đích
+        previousState.restore(board);
+
+        // [UC-UNDO - Basic Flow - Bước 10] Chuyển lượt chơi (currentTurn) về lại phe vừa thực hiện hoàn tác
+        this.currentTurn = previousState.getTurn();
+
+        // [UC-UNDO - Basic Flow - Bước 11] Khôi phục thời gian gốc của trạng thái cũ
+        this.whiteTimeLeft = previousState.getWhiteTimeLeft();
+        this.blackTimeLeft = previousState.getBlackTimeLeft();
+
+        // [UC-UNDO - Basic Flow - Bước 11] & [Luồng phụ phát sinh] Áp dụng hình phạt trừ 10 giây trực tiếp vào phe vừa Undo
+        if (this.currentTurn == Color.WHITE) {
+            this.whiteTimeLeft -= 10;
+            if (this.whiteTimeLeft <= 0) {
+                this.whiteTimeLeft = 0;
+                handleTimeOut(Color.WHITE); // Gọi luồng xử lý hết giờ nếu thời gian sau trừ <= 0
+                return;
+            }
+        } else {
+            this.blackTimeLeft -= 10;
+            if (this.blackTimeLeft <= 0) {
+                this.blackTimeLeft = 0;
+                handleTimeOut(Color.BLACK);
+                return;
+            }
+        }
+
+        // [UC-UNDO - Basic Flow - Bước 12] Thiết lập cờ hiệu khóa chức năng Undo kế tiếp trong lượt này
+        this.hasUndoedThisTurn = true;
+        undoCount++;
+        // [UC-UNDO - Basic Flow - Bước 13] Thực hiện đóng gói bit dữ liệu thời gian mới
         this.secondsElapsed = (this.whiteTimeLeft << 16) | (this.blackTimeLeft & 0xFFFF);
 
-        this.undoCount++;
-        System.out.println("[SYSTEM] Đã thực hiện Undo.");
-        view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
-        view.updateBoardGUI();
-        SaveLoadController.autoSave(currentTurn,secondsElapsed,undoCount,moveHistory,playWithAI);
+        // [UC-UNDO - Basic Flow - Bước 14] Cập nhật lại toàn bộ giao diện đồ họa hiển thị đồng hồ và bàn cờ
+        if (view != null) {
+            view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
+            view.updateBoardGUI();
+        }
+
+        // [UC-UNDO - Biên bổ sung] Kiểm tra lại xem thế cờ sau khi lùi có đang bị chiếu hay không để làm mới UI thông báo
+        checkGameState();
+
+        // [UC-UNDO - Basic Flow - Bước 15] Kích hoạt hàm tự động lưu dữ liệu ván đấu. Kết thúc Use Case.
+        SaveLoadController.autoSave(currentTurn, secondsElapsed, undoCount,moveHistory, playWithAI);
     }
+
     public void redo() {
         /*
          * [SR3 của UC-05]: Vô hiệu hóa tính năng Làm lại trong lúc Tạm dừng.
          */
-        if (isPaused || gameEnded || redoStack.isEmpty() || aiThinking) {
-            return;
-        }
+
+        // [UC-REDO - Basic Flow - Bước 2] & [UC-REDO - Alternate Flow - A1]
+        // Kiểm tra điều kiện tiên quyết (Kết thúc, Tạm dừng, AI đang nghĩ, RedoStack rỗng)
+        if (isPaused || gameEnded || redoStack.isEmpty() || aiThinking) return;
+
+        // [UC-REDO - Basic Flow - Bước 3] Giải phóng vị trí quân cờ đang chọn dở dang và xóa màu highlight cũ trên giao diện
         this.selectedPosition = null;
-        view.resetBoardColors();
+        if (view != null) {
+            view.resetBoardColors();
+        }
+
+        // [UC-REDO - Basic Flow - Bước 4] Đóng gói trạng thái hiện tại (GameState) rồi đẩy ngược vào lại undoStack
         GameState currentState = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
         undoStack.push(currentState);
+
+        GameState nextState = null;
+
+        // [UC-REDO - Basic Flow - Bước 5] Phân nhánh kiểm tra chế độ chơi (playWithAI)
         if (playWithAI) {
+            // [UC-REDO - Alternate Flow - A2] Kiểm tra điều kiện biên kích thước của redoStack cho chế độ đấu với AI
             if (redoStack.size() < 2) {
-                undoStack.pop();
+                undoStack.pop(); // Hủy trạng thái vừa đẩy vào undoStack như đặc tả
                 return;
             }
-            undoStack.push(redoStack.pop());
-            GameState aiNextState = redoStack.pop();
-            aiNextState.restore(board);
+            GameState playerState = redoStack.pop();
+            undoStack.push(playerState);
+            nextState = redoStack.pop();
             if (!redoMoveHistory.isEmpty()) {
                 moveHistory.add(redoMoveHistory.pop());
             }
             if (!redoMoveHistory.isEmpty()) {
                 moveHistory.add(redoMoveHistory.pop());
             }
-            this.currentTurn = aiNextState.getTurn();
-            this.whiteTimeLeft = aiNextState.getWhiteTimeLeft();
-            this.blackTimeLeft = aiNextState.getBlackTimeLeft();
         } else {
-            GameState nextState = redoStack.pop();
-            nextState.restore(board);
+            // Chế độ PvP: Lấy ra 1 trạng thái nước đi tiếp theo trực tiếp từ trong redoStack
+            nextState = redoStack.pop();
             if (!redoMoveHistory.isEmpty()) {
                 moveHistory.add(redoMoveHistory.pop());
             }
-            this.currentTurn = nextState.getTurn();
-            this.whiteTimeLeft = nextState.getWhiteTimeLeft();
-            this.blackTimeLeft = nextState.getBlackTimeLeft();
         }
+
+        // [UC-REDO - Basic Flow - Bước 6] Gọi hàm khôi phục dữ liệu restore(board) từ trạng thái nextState
+        nextState.restore(board);
+
+        // [UC-REDO - Basic Flow - Bước 7] Chuyển lượt chơi (currentTurn) sang cho người chơi tiếp theo theo đúng lịch sử
+        this.currentTurn = nextState.getTurn();
+
+        // [UC-REDO - Basic Flow - Bước 8] Khôi phục lại chính xác thời gian còn lại của hai bên từ trạng thái được gọi ra
+        this.whiteTimeLeft = nextState.getWhiteTimeLeft();
+        this.blackTimeLeft = nextState.getBlackTimeLeft();
+
+        // [UC-REDO - Basic Flow - Bước 9] Đặt lại trạng thái cờ hiệu giới hạn lượt (mở khóa quyền Undo cho chu kỳ mới)
+        this.hasUndoedThisTurn = false;
+
+        // [UC-REDO - Basic Flow - Bước 10] Tiến hành đóng gói lại dữ liệu bit mã hóa đồng hồ hiện thời
         this.secondsElapsed = (this.whiteTimeLeft << 16) | (this.blackTimeLeft & 0xFFFF);
-        this.undoCount++;
-        System.out.println("[SYSTEM] Đã thực hiện Redo.");
-        view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
-        view.updateBoardGUI();
-        SaveLoadController.autoSave(currentTurn, secondsElapsed,undoCount,moveHistory,playWithAI);
-    }
-    public void restartGame() {
-        this.board.reset();
-        this.currentTurn = Color.WHITE;
-        this.selectedPosition = null;
-        this.gameEnded = false;
-        this.isPaused = false;
-        this.hasUndoneThisTurn = false;
-        if (gameTimer != null) {
-            gameTimer.stop();
+
+        // [UC-REDO - Basic Flow - Bước 11] Cập nhật lại toàn bộ giao diện đồ họa hiển thị đồng hồ và bàn cờ công khai
+        if (view != null) {
+            view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
+            view.updateBoardGUI();
         }
-        this.whiteTimeLeft = BASE_TIME;
-        this.blackTimeLeft = BASE_TIME;
-        startTimer();
-        undoStack.clear();
-        redoStack.clear();
-        redoMoveHistory.clear();
-        moveHistory.clear();
-        view.resetBoardColors();
-        view.updateBoardGUI();
-        view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
-        view.updatePauseButton(false);
-    }
-    public void replayMoveForLoad(Position from, Position to) {
-        replayMoveForLoad(from, to, null);
+
+        // [UC-REDO - Biên bổ sung] Kiểm tra lại trạng thái chiếu/hết cờ của thế cờ mới tiến tới
+        checkGameState();
+
+        // [UC-REDO - Basic Flow - Bước 12] Gọi hàm tự động lưu dữ liệu ván đấu. Kết thúc Use Case.
+        SaveLoadController.autoSave(currentTurn, secondsElapsed,undoCount, moveHistory, playWithAI);
     }
 
-    public void replayMoveForLoad(Position from, Position to, String promotionChoice) {
+    public void replayMoveForLoad(Position from, Position to) {
         GameState stateBefore = new GameState(board, currentTurn, whiteTimeLeft, blackTimeLeft);
         undoStack.push(stateBefore);
-        board.move(from, to, promotionChoice);
+        board.move(from, to);
         currentTurn = (currentTurn == Color.WHITE) ? Color.BLACK : Color.WHITE;
     }
+
     public void clearHistory() {
         undoStack.clear();
         redoStack.clear();
         redoMoveHistory.clear();
         moveHistory.clear();
     }
+
+    public void restartGame() {
+        this.board.reset();
+
+        this.currentTurn = Color.WHITE;
+        this.selectedPosition = null;
+        this.gameEnded = false;
+        this.isPaused = false;
+        this.aiThinking = false;
+        this.whiteUndoLeft = 3;
+        this.blackUndoLeft = 3;
+        if (gameTimer != null) {
+            gameTimer.stop();
+        }
+        this.whiteTimeLeft = BASE_TIME;
+        this.blackTimeLeft = BASE_TIME;
+
+        startTimer();
+
+        undoStack.clear();
+        redoStack.clear();
+        redoMoveHistory.clear();
+        moveHistory.clear();
+        if (view != null) {
+            view.resetBoardColors();
+            view.updateBoardGUI();
+            view.updateTimer(whiteTimeLeft, blackTimeLeft, currentTurn);
+            view.updatePauseButton(false);
+        }
+        triggerAIMoveIfNeeded();
+    }
+
     private void showGameOverDialog(String message) {
 
         String[] options = {
@@ -756,7 +922,7 @@ public class GameController {
 
         // [UC-07.6] Xử lý lựa chọn của người chơi sau khi game kết thúc
         if (choice == 0) {
-            restartGame(); // Khởi tạo lại bàn cờ mới
+            restartGame();  // Khởi tạo lại bàn cờ mới
         } else if (choice == 1) {
             view.dispose(); // Đóng cửa sổ
             new StartWindow(); // Trở về menu chính

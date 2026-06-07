@@ -10,16 +10,9 @@ public class GameState {
     private Position enPassantTarget;
 
     public GameState(Board board, Color turn) {
-        this.grid = new Piece[8][8];
-        for (int r = 0; r < 8; r++) {
-            for (int c = 0; c < 8; c++) {
-                Piece originalPiece = board.get(new Position(r, c));
-                this.grid[r][c] = copyPiece(originalPiece);
-            }
-        }
-        this.turn = turn;
-        this.enPassantTarget = copyPosition(board.getEnPassantTarget());
+        this(board, turn, 0, 0);
     }
+
     public GameState(Board board, Color turn, int whiteTimeLeft, int blackTimeLeft) {
         this.grid = new Piece[8][8];
         for (int r = 0; r < 8; r++) {
@@ -50,21 +43,21 @@ public class GameState {
 
         Color color = originalPiece.getColor();
         char symbol = Character.toLowerCase(originalPiece.getShortName());
-        Piece copy;
+        Piece copiedPiece;
         switch (symbol) {
-            case 'p': copy = new Pawn(color); break;
-            case 'r': copy = new Rook(color); break;
-            case 'n': copy = new Knight(color); break;
-            case 'b': copy = new Bishop(color); break;
-            case 'q': copy = new Queen(color); break;
-            case 'k': copy = new King(color); break;
-            default:  copy = null; break;
+            case 'p': copiedPiece = new Pawn(color); break;
+            case 'r': copiedPiece = new Rook(color); break;
+            case 'n': copiedPiece = new Knight(color); break;
+            case 'b': copiedPiece = new Bishop(color); break;
+            case 'q': copiedPiece = new Queen(color); break;
+            case 'k': copiedPiece = new King(color); break;
+            default:  copiedPiece = null; break;
         }
 
-        if (copy != null) {
-            copy.setMoved(originalPiece.hasMoved());
+        if (copiedPiece != null) {
+            copiedPiece.setMoved(originalPiece.hasMoved());
         }
-        return copy;
+        return copiedPiece;
     }
 
     private Position copyPosition(Position position) {
@@ -73,6 +66,7 @@ public class GameState {
         }
         return new Position(position.getR(), position.getC());
     }
+
     public int getWhiteTimeLeft() {
         return whiteTimeLeft;
     }

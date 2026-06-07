@@ -2,9 +2,9 @@ package view;
 
 import model.*;
 
+import java.util.List;
 import java.awt.*;
 import java.io.*;
-import java.util.List;
 
 public class SaveManager {
     private static final String SAVE_FILE = "savegame.txt";
@@ -13,29 +13,37 @@ public class SaveManager {
      * Chức năng: Thực thi tuần tự hóa (Serialization) trạng thái game ra tệp tin cấu hình.
      * Ánh xạ các Use Case phân rã thành phần:
      */
-    public static void saveGameData(Color currentTurn, int secondsElapsed,int undoCount, List<MoveLog> moves,boolean playWithAI) {
+    public static void saveGameData(Color currentTurn, int secondsElapsed,int undoCount,List<MoveLog> moves,boolean playWithAI) {
         String saveFile = playWithAI ? SAVE_FILE_AI : SAVE_FILE;
+        /* UC-04.1.5: Write Save File
+         * Ghi lần lượt Turn, Time, Undo Count và Move History xuống tệp savegame nhằm lưu trạng thái hiện tại của ván đấu.
+         */
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(saveFile))) {
-            /* * MÃ USE CASE: UC-04.1.1 (Trích xuất lượt đi)
-             * Chức năng: Đọc màu của lượt đi hiện tại từ Controller và chuyển đổi thành ký tự W hoặc B.
+            /* UC-04.1.1: Extract Turn
+             * Lấy thông tin lượt chơi hiện tại từ GameController và mã hóa thành W (White) hoặc B (Black)
+             * để lưu vào dòng đầu tiên của file save.
              */
             bw.write(currentTurn == Color.WHITE ? "W" : "B");
             bw.newLine();
 
-            /* * MÃ USE CASE: UC-04.1.2 (Trích xuất thời gian)
-             * Chức năng: Lấy giá trị biến đếm giây secondsElapsed của hệ thống để đồng bộ thời gian thi đấu.
+            /* UC-04.1.2: Extract Time
+             * Trích xuất dữ liệu thời gian trận đấu đã được đóng gói trong biến secondsElapsed để phục vụ khôi phục sau này.
              */
             bw.write(String.valueOf(secondsElapsed));
             bw.newLine();
+            /* UC-04.1.3: Extract Undo Count
+             * Lấy số lần Undo đã sử dụng trong lượt hiện tại để duy trì đúng giới hạn Undo khi tải lại ván đấu.
+             */
             bw.write(String.valueOf(undoCount));
             bw.newLine();
+            /* UC-04.1.4: Extract Move History
+             * Duyệt toàn bộ lịch sử nước đi và chuyển đổi mỗi nước đi thành chuỗi tọa độ from-to
+             * để lưu xuống file save.
+             */
             for (MoveLog move : moves) {
                 Position from = move.getFrom();
                 Position to = move.getTo();
                 bw.write(from.getR() + "," + from.getC() + "," + to.getR() + "," + to.getC());
-                if (move.getPromotionChoice() != null) {
-                    bw.write("," + Board.normalizePromotionChoice(move.getPromotionChoice()));
-                }
                 bw.newLine();
             }
         } catch (Exception e) {
@@ -49,6 +57,11 @@ public class SaveManager {
     }
     public static SaveGameData loadGameData(boolean playWithAI) {
         String saveFile = playWithAI ? SAVE_FILE_AI : SAVE_FILE;
+        System.out.println(new File(saveFile).getAbsolutePath());
+        /* UC-04.2.1: Read Save Game File
+         * Đọc dữ liệu đã lưu từ tệp savegame
+         * và ánh xạ thành đối tượng SaveGameData.
+         */
         try (BufferedReader br = new BufferedReader(new FileReader(saveFile)))
         {
             SaveGameData data = new SaveGameData();
@@ -60,10 +73,13 @@ public class SaveManager {
             while ((line = br.readLine()) != null) {
                 data.getMoves().add(line);
             }
+
             return data;
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
+            /* UC-04.2.1.5: Handle Load Error
+             * Bắt ngoại lệ khi file không tồn tại hoặc dữ liệu lỗi.
+             * Trả về null để luồng gọi xử lý an toàn.
+             */
             e.printStackTrace();
             return null;
         }

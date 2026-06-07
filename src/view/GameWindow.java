@@ -34,14 +34,15 @@ public class GameWindow extends JFrame {
     private JButton pauseButton;
     private JLayeredPane layeredPane;
     private JPanel pauseOverlay;
+
     private JPanel boardPanel;
-    private Position dragStartPosition;
-    private boolean draggingPiece;
     private JPanel rightPanel;
     private JPanel rowLabels;
     private JPanel colLabels;
     private JLabel titleLabel;
     private java.util.List<JButton> controlButtons = new ArrayList<>();
+    private Position dragStartPosition;
+    private boolean draggingPiece;
 
     public GameWindow() {
         this(false);
@@ -50,9 +51,7 @@ public class GameWindow extends JFrame {
     public GameWindow(boolean playWithAI) {
         this.board = new Board();
         this.controller = new GameController(this.board, this, playWithAI);
-        SoundManager.setSoundEnabled(
-                SoundConfig.load()
-        );
+        SoundManager.setSoundEnabled(SoundConfig.load());
         setTitle("CỜ VUA");
         setSize(1000, 700);
         setMinimumSize(new Dimension(850, 650));
@@ -130,8 +129,10 @@ public class GameWindow extends JFrame {
         pauseOverlay.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         pauseOverlay.add(pauseLabel);
 
-        pauseOverlay.addMouseListener(new MouseAdapter() {});
-        pauseOverlay.addMouseMotionListener(new MouseMotionAdapter() {});
+        pauseOverlay.addMouseListener(new MouseAdapter() {
+        });
+        pauseOverlay.addMouseMotionListener(new MouseMotionAdapter() {
+        });
         pauseOverlay.setVisible(false);
         pauseLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         layeredPane.add(pauseOverlay, JLayeredPane.PALETTE_LAYER);
@@ -198,13 +199,12 @@ public class GameWindow extends JFrame {
                     controller.togglePause();
                 });
             } else if (name.equals("Đầu Hàng")) {
-                SoundManager.playButton();
                 // (UC-07): Người chơi bấm chọn chức năng "Đầu Hàng" trên giao diện màn hình thi đấu.
+                SoundManager.playButton();
                 btn.addActionListener(e -> {
                     controller.resignGame();
                 });
             } else if (name.equals("Cài Đặt")) {
-                SoundManager.playButton();
                 btn.addActionListener(e -> new SettingWindow(this));
             }
 
@@ -212,7 +212,7 @@ public class GameWindow extends JFrame {
             rightPanel.add(Box.createVerticalStrut(15));
         }
 
-        // --- BẮT ĐẦU: GIAO DIỆN ĐỒNG HỒ ĐÔI ---
+        // --- BẮT ĐẦU: GIAO DIỆN ĐỒNG HỒ ĐÔI (cải tiến phục vụ cho UC-05.1/UC-05.2:Paususe/Resume Game) ---
         if (!playWithAI) {
             JPanel blackTimerPanel = new JPanel();
             blackTimerPanel.setBackground(CONTROL_PANEL_BG);
@@ -250,10 +250,11 @@ public class GameWindow extends JFrame {
                 dragStartPosition = null;
                 draggingPiece = false;
 
-                if (controller.beginDragFrom(row, col)) {
+                if (controller.canStartDrag(row, col)) {
                     dragStartPosition = new Position(row, col);
                     draggingPiece = true;
                     square.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+                    controller.previewDragFrom(row, col);
                 }
             }
 
@@ -267,9 +268,8 @@ public class GameWindow extends JFrame {
                 Position dropPosition = getDropPosition(e);
                 if (dropPosition == null) {
                     resetBoardColors();
-                } else if (dragStartPosition.equals(dropPosition)) {
-                    // Keep the move hints visible after a normal click on the selected piece.
-                } else {
+                    updateBoardGUI();
+                } else if (!dragStartPosition.equals(dropPosition)) {
                     controller.handleDragDrop(
                             dragStartPosition.getR(),
                             dragStartPosition.getC(),
@@ -350,14 +350,17 @@ public class GameWindow extends JFrame {
         for (int r = 0; r < 8; r++) {
             for (int c = 0; c < 8; c++) {
                 Position to = new Position(r, c);
-                if (board.isLegalMove(from, to)) {
-                    Piece targetPiece = board.get(to);
-                    if (targetPiece != null) {
-                        chessSquares[r][c].setBackground(CAPTURE_COLOR);
-                    } else {
-                        chessSquares[r][c].setBackground(MOVE_COLOR);
+                if (piece.isValidMove(from, to, board)) {
+                    if (!board.simulateMoveAndCheck(from, to, piece.getColor())) {
+                        Piece targetPiece = board.get(to);
+                        if (targetPiece instanceof King) continue;
+                        if (targetPiece != null) {
+                            chessSquares[r][c].setBackground(CAPTURE_COLOR);
+                        } else {
+                            chessSquares[r][c].setBackground(MOVE_COLOR);
+                        }
+                        chessSquares[r][c].setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
                     }
-                    chessSquares[r][c].setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
                 }
             }
         }
@@ -372,6 +375,7 @@ public class GameWindow extends JFrame {
         updateBoardGUI();
     }
 
+    // Hàm phụ trợ cập nhật giao diện đồng hồ phụ trợ UC-05.1/UC-05.2: Pause/Resume Game
     public void updateTimer(int whiteSeconds, int blackSeconds, Color currentTurn) {
         if (whiteTimerLabel == null || blackTimerLabel == null) {
             return;
@@ -396,6 +400,10 @@ public class GameWindow extends JFrame {
         if (blackSeconds <= 30) blackTimerLabel.setForeground(new Color(220, 53, 69));
     }
 
+    /**
+     * UC-05.1 & UC-05.2: Pause/Resume
+     * Chức năng: Cập nhật nút bấm và bật/tắt Overlay che bàn cờ
+     */
     public void updatePauseButton(boolean paused) {
         if (paused) {
             pauseButton.setText("Tiếp Tục");
@@ -420,6 +428,7 @@ public class GameWindow extends JFrame {
     public GameController getController() {
         return controller;
     }
+
     public void refreshTheme() {
 
         DARK_SQUARE_COLOR = Theme.DARK_SQUARE_COLOR;
@@ -430,7 +439,7 @@ public class GameWindow extends JFrame {
 
         resetBoardColors();
 
-        boardPanel.setBorder( BorderFactory.createLineBorder(BORDER_COLOR, 3) );
+        boardPanel.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 3));
 
         rightPanel.setBackground(CONTROL_PANEL_BG);
         rowLabels.setBackground(CONTROL_PANEL_BG);

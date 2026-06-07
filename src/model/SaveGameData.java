@@ -28,7 +28,6 @@ public class SaveGameData {
     public List<String> getMoves() {
         return moves;
     }
-
     public int getUndoCount() {
         return undoCount;
     }
