@@ -1,9 +1,9 @@
 B
-39649880
+39584344
 RNBQKBNR
--PPPPPPP
-P-------
+PPPP-PPP
 --------
+----P---
 --------
 --------
 pppppppp
