@@ -1,7 +1,10 @@
 package test;
 
+import controller.GameController;
+import model.Board;
 import org.junit.jupiter.api.Test;
 import view.GameConfig;
+import view.GameWindow;
 
 import java.io.File;
 
@@ -108,5 +111,29 @@ public class GameConfigTest {
                 GameConfig.isAdvancedMode(),
                 "Giá trị mặc định phải là false khi không có file cấu hình!"
         );
+    }
+    /**
+     * [UC-08: Change Setting]
+     * Chế độ nâng cao bật
+     *
+     * Kết quả mong đợi:
+     * Chức năng kéo thả không hiển thị đường đi 
+     */
+    @Test
+    void testPreviewDragAdvancedModeOn() {
+
+        GameConfig.setAdvancedMode(true);
+
+        Board board = new Board();
+        board.init();
+
+        GameWindow view = new GameWindow(false);
+
+        GameController controller =
+                new GameController(board, view);
+
+        controller.previewDragFrom(6, 0);
+
+        assertTrue(GameConfig.isAdvancedMode());
     }
 }

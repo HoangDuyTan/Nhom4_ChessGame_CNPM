@@ -518,9 +518,11 @@ public class GameController {
             return;
         }
 
-        Position from = new Position(row, col);
         view.resetBoardColors();
-        view.highlightValidMoves(from, board);
+        if (!GameConfig.isAdvancedMode()) {
+            Position from = new Position(row, col);
+            view.highlightValidMoves(from, board);
+        }
     }
 
     public void handleDragDrop(int fromRow, int fromCol, int toRow, int toCol) {
