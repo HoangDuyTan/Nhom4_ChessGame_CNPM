@@ -3,8 +3,10 @@ package test;
 import model.SaveGameData;
 import org.junit.jupiter.api.Test;
 import java.awt.Color;
-import static org.junit.Assert.assertNotNull;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 public class SaveGameDataTest {
     /**
      * Mục tiêu:
