@@ -88,254 +88,6 @@ public class GameControllerTest {
     }
 
     /**
-     * [UC-UNDO][Test]
-     * Kiểm tra chức năng Undo cơ bản có hoạt động chính xác khi có nước đi.
-     * Xác minh lượt chơi được trả về đúng phe trước đó và áp dụng hình phạt trừ 10 giây.
-     */
-    @Test
-    void testUndoBasic() {
-        // Thiết lập trạng thái và thời gian ban đầu để kiểm tra
-        gameController.setCurrentTurn(Color.WHITE);
-        gameController.setWhiteTimeLeft(180);
-        gameController.setBlackTimeLeft(180);
-
-        // Giả lập thực hiện 1 nước đi bằng cách click chuột: Tốt trắng từ (1, 0) tiến lên (2, 0)
-        // Hàm processMove sẽ lưu trạng thái TRƯỚC KHI ĐI (Trắng, 180s) vào undoStack, sau đó đổi lượt sang ĐEN
-        try {
-            gameController.handleSquareClick(1, 0); // Chọn quân
-            gameController.handleSquareClick(2, 0); // Di chuyển quân
-        } catch (Exception e) {
-            // Nuốt NullPointerException do view = null
-        }
-
-        // Kích hoạt hàm hoàn tác
-        try {
-            gameController.undo();
-        } catch (Exception e) {}
-
-        // 1. Kiểm tra lượt chơi phải quay lại cho phe TRẮNG
-        assertEquals(Color.WHITE, gameController.getCurrentTurn(), "Lượt chơi chưa chuyển về đúng phe Trắng sau khi Undo!");
-
-        /* * 2. Kiểm tra thời gian:
-         * Trạng thái trước khi đi lưu 180s. Theo logic hàm undo() của bạn:
-         * Sau khi khôi phục lượt Trắng -> Trắng bị phạt trừ 10s -> 180 - 10 = 170s.
-         */
-        assertEquals(170, gameController.getWhiteTimeLeft(), "Thời gian của phe Trắng sau khi Undo và phạt 10s chưa chính xác!");
-    }
-
-    /**
-     * [UC-UNDO][Test]
-     * Kiểm tra tính an toàn (Robustness): Không thực hiện Undo và không gây lỗi hệ thống khi lịch sử rỗng (Stack rỗng).
-     */
-    @Test
-    void testUndoEmptyStack() {
-        // Khi vừa vào game chưa đi nước nào, undoStack trống, gọi undo không được văng lỗi
-        assertDoesNotThrow(() -> gameController.undo(), "Hệ thống bị crash khi cố tình Undo lúc Stack rỗng!");
-
-        // Trạng thái mặc định ban đầu không bị thay đổi
-        assertEquals(Color.WHITE, gameController.getCurrentTurn());
-    }
-
-    /**
-     * [UC-REDO][Test]
-     * Kiểm tra chức năng Redo (Làm lại): Đảm bảo sau khi Undo, người chơi có thể bấm Redo để áp dụng lại nước đi đó.
-     */
-    @Test
-    void testRedoAfterUndo() {
-        // Đi 1 nước (Lượt Trắng đi xong -> chuyển sang lượt Đen)
-        try {
-            gameController.handleSquareClick(1, 0);
-            gameController.handleSquareClick(2, 0);
-        } catch (Exception e) {}
-
-        // Undo nước đi vừa rồi -> chuyển ngược về lượt Trắng
-        try {
-            gameController.undo();
-        } catch (Exception e) {}
-        assertEquals(Color.WHITE, gameController.getCurrentTurn());
-
-        // Bấm Redo để thực hiện lại nước đi đó -> Lượt chơi phải chuyển lại sang phe ĐEN đúng như tương lai
-        try {
-            gameController.redo();
-        } catch (Exception e) {}
-
-        assertEquals(Color.BLACK, gameController.getCurrentTurn(), "Redo xong lượt chơi phải thuộc về phe Đen!");
-    }
-
-    /**
-     * [UC-UNDO][Test]
-     * Kiểm tra cơ chế quản lý dữ liệu: Đảm bảo khi gọi hàm Undo, trạng thái hiện tại phải được lưu đúng vào redoStack.
-     */
-    @Test
-    void testUndoPushToRedoStack() {
-        // Đi 1 nước cờ
-        try {
-            gameController.handleSquareClick(1, 0);
-            gameController.handleSquareClick(2, 0);
-        } catch (Exception e) {}
-
-        // Bấm Undo
-        try {
-            gameController.undo();
-        } catch (Exception e) {}
-
-        // Nếu trạng thái được đẩy vào redoStack đúng, lệnh redo() tiếp theo phải thực hiện được ngon lành mà không bị chặn
-        assertDoesNotThrow(() -> gameController.redo(), "RedoStack bị rỗng hoặc lỗi khiến không thể gọi hàm redo() sau khi Undo!");
-    }
-
-    /**
-     * [UC-UNDO][Test]
-     * Kiểm tra giới hạn biên thời gian phạt: Đảm bảo thời gian sau khi phạt Undo không bao giờ xuống dưới mốc 0 giây (bị âm).
-     */
-    @Test
-    void testUndoTimeDeductionLowerBound() {
-        // Giả lập người chơi chỉ còn 5 giây trước khi thực hiện hành động
-        gameController.setCurrentTurn(Color.WHITE);
-        gameController.setWhiteTimeLeft(5);
-
-        // Đi quân
-        try {
-            gameController.handleSquareClick(1, 0);
-            gameController.handleSquareClick(2, 0);
-        } catch (Exception e) {}
-
-        // Bấm Undo -> Thời gian khôi phục 5s, trừ đi 10s phạt = -5s.
-        // Logic chặn `if (this.whiteTimeLeft < 0) this.whiteTimeLeft = 0;` phải đưa về mốc 0.
-        try {
-            gameController.undo();
-        } catch (Exception e) {}
-
-        assertEquals(0, gameController.getWhiteTimeLeft(), "Thời gian của người chơi bị hiển thị số âm sau khi phạt Undo!");
-    }
-    /**
-     * [UC-UNDO][Test]
-     * Kiểm tra giới hạn tối đa số lần Undo của quân TRẮNG.
-     * Đảm bảo hệ thống chặn không cho phép hoàn tác khi vượt quá 3 lần quy định.
-     */
-    @Test
-    void testWhiteMaxThreeUndos() {
-        // Thiết lập ban đầu: Lượt của TRẮNG
-        gameController.setCurrentTurn(Color.WHITE);
-        gameController.setWhiteTimeLeft(180);
-        gameController.setBlackTimeLeft(180);
-
-        // --- Giả lập TRẮNG thực hiện nước đi hợp lệ đầu tiên ---
-        // Lượt TRẮNG đi -> Đổi sang lượt ĐEN -> Undo lúc này tính cho TRẮNG
-        gameController.handleSquareClick(1, 0);
-        gameController.handleSquareClick(2, 0);
-
-        // Thực hiện Undo lần 1 (Hợp lệ: còn 2 lượt)
-        gameController.undo();
-        assertEquals(Color.WHITE, gameController.getCurrentTurn(), "Undo lần 1 thất bại!");
-
-        // --- Giả lập TRẮNG đi nước thứ 2 ---
-        gameController.handleSquareClick(1, 0);
-        gameController.handleSquareClick(2, 0);
-
-        // Thực hiện Undo lần 2 (Hợp lệ: còn 1 lượt)
-        gameController.undo();
-
-        // --- Giả lập TRẮNG đi nước thứ 3 ---
-        gameController.handleSquareClick(1, 0);
-        gameController.handleSquareClick(2, 0);
-
-        // Thực hiện Undo lần 3 (Hợp lệ: còn 0 lượt)
-        gameController.undo();
-
-        // --- Giả lập TRẮNG đi nước thứ 4 ---
-        gameController.handleSquareClick(1, 0);
-        gameController.handleSquareClick(2, 0);
-
-        // Ghi lại trạng thái trước khi cố tình Undo lần 4
-        Color turnBeforeFailedUndo = gameController.getCurrentTurn(); // Hiện tại phải là BLACK
-
-        // Thực hiện Undo lần 4 (Không hợp lệ: Hệ thống phải chặn lại và giữ nguyên trạng thái)
-        gameController.undo();
-
-        // Kiểm tra xem lượt chơi có bị hoàn tác hay không. Nếu bị chặn, lượt vẫn phải giữ nguyên là BLACK
-        assertEquals(turnBeforeFailedUndo, gameController.getCurrentTurn(),
-                "Quân TRẮNG đã dùng quá 3 lần Undo nhưng hệ thống không chặn lại!");
-    }
-
-    /**
-     * [UC-UNDO][Test]
-     * Kiểm tra giới hạn tối đa số lần Undo của quân ĐEN.
-     * Đảm bảo hệ thống chặn không cho phép hoàn tác khi vượt quá 3 lần quy định.
-     */
-    @Test
-    void testBlackMaxThreeUndos() {
-        // Thiết lập ban đầu: Để ĐEN đi thì TRẮNG phải đi trước 1 nước
-        gameController.setCurrentTurn(Color.WHITE);
-        gameController.handleSquareClick(1, 0);
-        gameController.handleSquareClick(2, 0); // Bàn cờ chuyển sang lượt ĐEN
-
-        // Giả lập ĐEN đi quân (ví dụ Tốt đen từ ô 6,0 sang 5,0)
-        // Lượt ĐEN đi -> Đổi sang lượt TRẮNG -> Undo lúc này tính cho ĐEN
-
-        // Lần 1
-        gameController.handleSquareClick(6, 0);
-        gameController.handleSquareClick(5, 0);
-        gameController.undo(); // Undo hợp lệ (ĐEN còn 2 lần)
-
-        // Lần 2
-        gameController.handleSquareClick(6, 0);
-        gameController.handleSquareClick(5, 0);
-        gameController.undo(); // Undo hợp lệ (ĐEN còn 1 lượt)
-
-        // Lần 3
-        gameController.handleSquareClick(6, 0);
-        gameController.handleSquareClick(5, 0);
-        gameController.undo(); // Undo hợp lệ (ĐEN còn 0 lượt)
-
-        // Lần 4 (Quá giới hạn)
-        gameController.handleSquareClick(6, 0);
-        gameController.handleSquareClick(5, 0); // Đi quân lần nữa, lượt chuyển sang WHITE
-
-        Color turnBeforeFailedUndo = gameController.getCurrentTurn(); // Phải là WHITE
-
-        gameController.undo(); // Cố tình gọi Undo lần 4, hệ thống phải từ chối hành động
-
-        assertEquals(turnBeforeFailedUndo, gameController.getCurrentTurn(),
-                "Quân ĐEN đã dùng quá 3 lần Undo nhưng hệ thống không chặn lại!");
-    }
-
-    /**
-     * [UC-UNDO][Test]
-     * Kiểm tra khôi phục số lượt Undo khi làm mới bàn đấu (Chơi lại ván mới).
-     * Đảm bảo số lần Undo của cả hai bên được làm mới đầy đủ về mốc 3 lần sau khi hệ thống Khởi động lại.
-     */
-    @Test
-    void testUndoCountResetOnRestart() {
-        // Thiết lập ban đầu: Lượt của TRẮNG
-        gameController.setCurrentTurn(Color.WHITE);
-
-        // TRẮNG thực hiện đi quân rồi dùng hết 1 lần Undo
-        gameController.handleSquareClick(1, 0);
-        gameController.handleSquareClick(2, 0);
-        gameController.undo();
-
-        // Kích hoạt tính năng chơi lại ván mới
-        gameController.restartGame();
-
-        // Sau khi restart, đi quân lại lần nữa
-        gameController.handleSquareClick(1, 0);
-        gameController.handleSquareClick(2, 0);
-
-        // Thử thực hiện Undo liên tiếp 3 lần xem có được phục hồi đầy đủ hay không
-        assertDoesNotThrow(() -> {
-            gameController.undo(); // Lần 1 sau khi restart
-
-            gameController.handleSquareClick(1, 0);
-            gameController.handleSquareClick(2, 0);
-            gameController.undo(); // Lần 2 sau khi restart
-
-            gameController.handleSquareClick(1, 0);
-            gameController.handleSquareClick(2, 0);
-            gameController.undo(); // Lần 3 sau khi restart
-        }, "Lượt dùng Undo chưa được reset về 3 sau khi bấm Chơi Mới (Restart)!");
-    }
-
-    /**
      * [Test Đóng Gói Bit]
      * Xác minh thuật toán nén và giải nén bit thời gian tích hợp trong GameController hoạt động chính xác.
      */
@@ -663,5 +415,363 @@ public class GameControllerTest {
                 timer,
                 "Chế độ chơi với máy không được tạo đồng hồ đếm giờ!"
         );
+    }
+
+    /**
+     * [UC-UNDO - Basic Flow]
+     * Kiểm tra logic Undo cơ bản: Quay lại lượt trước đó và áp dụng hình phạt -10s.
+     */
+    @Test
+    void testUndoBasic() {
+        // Arrange: Thiết lập trạng thái và thời gian ban đầu (180s)
+        gameController.setCurrentTurn(Color.WHITE);
+        gameController.setWhiteTimeLeft(180);
+        gameController.setBlackTimeLeft(180);
+
+        // Act: Người chơi di chuyển Tốt trắng (1,0) -> (2,0) rồi thực hiện Undo
+        try {
+            gameController.handleSquareClick(1, 0);
+            gameController.handleSquareClick(2, 0);
+            gameController.undo();
+        } catch (Exception e) {}
+
+        // Assert: Lượt chơi quay về WHITE và thời gian Trắng còn lại là 170s (180s - 10s)
+        assertEquals(Color.WHITE, gameController.getCurrentTurn());
+        assertEquals(170, gameController.getWhiteTimeLeft());
+    }
+
+    /**
+     * [UC-UNDO - Robustness]
+     * Kiểm tra tính an toàn: Hệ thống không crash và giữ nguyên trạng thái khi undoStack rỗng.
+     */
+    @Test
+    void testUndoEmptyStack() {
+        // Act & Assert: Gọi undo khi chưa có nước đi, hệ thống không văng ngoại lệ
+        assertDoesNotThrow(() -> gameController.undo());
+        assertEquals(Color.WHITE, gameController.getCurrentTurn());
+    }
+
+    /**
+     * [UC-REDO - Basic Flow]
+     * Kiểm tra logic Redo cơ bản: Đảm bảo khôi phục lại nước đi sau khi bấm Undo.
+     */
+    @Test
+    void testRedoAfterUndo() {
+        // Arrange: Thực hiện nước đi và lùi lại (Undo)
+        try {
+            gameController.handleSquareClick(1, 0);
+            gameController.handleSquareClick(2, 0);
+            gameController.undo();
+        } catch (Exception e) {}
+        assertEquals(Color.WHITE, gameController.getCurrentTurn());
+
+        // Act: Người chơi bấm Redo
+        try {
+            gameController.redo();
+        } catch (Exception e) {}
+
+        // Assert: Lượt chơi tiến tới tương lai, chuyển sang phe BLACK
+        assertEquals(Color.BLACK, gameController.getCurrentTurn());
+    }
+
+    /**
+     * [UC-UNDO - Data Flow]
+     * Kiểm tra luồng dữ liệu: Trạng thái hiện tại phải được lưu vào redoStack khi Undo.
+     */
+    @Test
+    void testUndoPushToRedoStack() {
+        // Arrange: Tạo một nước đi mẫu và lùi cờ
+        try {
+            gameController.handleSquareClick(1, 0);
+            gameController.handleSquareClick(2, 0);
+            gameController.undo();
+        } catch (Exception e) {}
+
+        // Act & Assert: Kiểm tra redoStack không rỗng bằng cách thực thi lệnh redo() an toàn
+        assertDoesNotThrow(() -> gameController.redo());
+    }
+
+    /**
+     * [UC-UNDO - Boundary Condition]
+     * Kiểm tra điều kiện biên: Thời gian sau khi phạt Undo không được xuống dưới 0 giây.
+     */
+    @Test
+    void testUndoTimeDeductionLowerBound() {
+        // Arrange: Người chơi chỉ còn 5 giây trước khi thực hiện nước đi
+        gameController.setCurrentTurn(Color.WHITE);
+        gameController.setWhiteTimeLeft(5);
+
+        // Act: Di chuyển quân và thực hiện Undo (Phạt trừ 10s)
+        try {
+            gameController.handleSquareClick(1, 0);
+            gameController.handleSquareClick(2, 0);
+            gameController.undo();
+        } catch (Exception e) {}
+
+        // Assert: Thời gian bị đưa về mốc biên tối thiểu là 0s (Không bị số âm)
+        assertEquals(0, gameController.getWhiteTimeLeft());
+    }
+
+    /**
+     * [UC-UNDO - Alternate Flow - A2]
+     * Kiểm tra giới hạn tối đa số lần Undo của quân TRẮNG (Chặn ở lần thứ 4).
+     */
+    @Test
+    void testWhiteMaxThreeUndos() {
+        // Arrange: Cài đặt trận đấu và thực hiện chuỗi di chuyển - lùi cờ 3 lần thành công
+        gameController.setCurrentTurn(Color.WHITE);
+        gameController.setWhiteTimeLeft(180);
+        gameController.setBlackTimeLeft(180);
+
+        for (int i = 0; i < 3; i++) {
+            gameController.handleSquareClick(1, 0);
+            gameController.handleSquareClick(2, 0);
+            gameController.undo();
+        }
+
+        // Act: Cố gắng di chuyển và bấm Undo lần thứ 4 (Vượt giới hạn)
+        gameController.handleSquareClick(1, 0);
+        gameController.handleSquareClick(2, 0);
+        Color turnBeforeFailedUndo = gameController.getCurrentTurn(); // Hiện tại là BLACK
+        gameController.undo();
+
+        // Assert: Hệ thống chặn hành động, giữ nguyên lượt BLACK của đối thủ
+        assertEquals(turnBeforeFailedUndo, gameController.getCurrentTurn());
+    }
+
+    /**
+     * [UC-UNDO - Alternate Flow - A2]
+     * Kiểm tra giới hạn tối đa số lần Undo của quân ĐEN (Chặn ở lần thứ 4).
+     */
+    @Test
+    void testBlackMaxThreeUndos() {
+        // Arrange: Chuyển lượt sang BLACK, thực hiện chuỗi di chuyển - lùi cờ 3 lần thành công
+        gameController.setCurrentTurn(Color.WHITE);
+        gameController.handleSquareClick(1, 0);
+        gameController.handleSquareClick(2, 0);
+
+        for (int i = 0; i < 3; i++) {
+            gameController.handleSquareClick(6, 0);
+            gameController.handleSquareClick(5, 0);
+            gameController.undo();
+        }
+
+        // Act: Cố gắng di chuyển và bấm Undo lần thứ 4 (Vượt giới hạn)
+        gameController.handleSquareClick(6, 0);
+        gameController.handleSquareClick(5, 0); // Lượt chuyển sang WHITE
+        Color turnBeforeFailedUndo = gameController.getCurrentTurn();
+        gameController.undo();
+
+        // Assert: Hệ thống chặn hành động, giữ nguyên lượt WHITE của đối thủ
+        assertEquals(turnBeforeFailedUndo, gameController.getCurrentTurn());
+    }
+
+    /**
+     * [UC-UNDO - Business Rule]
+     * Kiểm tra khôi phục số lượt Undo (Reset về 3) khi khởi động lại ván đấu (Restart).
+     */
+    @Test
+    void testUndoCountResetOnRestart() {
+        // Arrange: Trắng di chuyển quân, dùng 1 lần Undo rồi Restart game
+        gameController.setCurrentTurn(Color.WHITE);
+        gameController.handleSquareClick(1, 0);
+        gameController.handleSquareClick(2, 0);
+        gameController.undo();
+        gameController.restartGame();
+
+        // Act & Assert: Đảm bảo Trắng có thể thực hiện liên tiếp 3 lần Undo mới sau khi restart
+        gameController.handleSquareClick(1, 0);
+        gameController.handleSquareClick(2, 0);
+
+        assertDoesNotThrow(() -> {
+            gameController.undo(); // Lần 1
+            gameController.handleSquareClick(1, 0);
+            gameController.handleSquareClick(2, 0);
+            gameController.undo(); // Lần 2
+            gameController.handleSquareClick(1, 0);
+            gameController.handleSquareClick(2, 0);
+            gameController.undo(); // Lần 3
+        });
+    }
+
+    /**
+     * [UC-UNDO - AI Mode]
+     * Kiểm tra Undo trong chế độ AI: Hệ thống phải xóa đồng thời 2 trạng thái cờ và 2 bản ghi lịch sử.
+     */
+    @Test
+    void testUndoWithAISuccess() throws Exception {
+        // Arrange: Khởi tạo controller chế độ AI và mock dữ liệu private qua Reflection
+        Board aiBoard = new Board();
+        GameController aiController = new GameController(aiBoard, null, true);
+
+        Field undoStackField = GameController.class.getDeclaredField("undoStack");
+        Field moveHistoryField = GameController.class.getDeclaredField("moveHistory");
+        Field redoStackField = GameController.class.getDeclaredField("redoStack");
+        undoStackField.setAccessible(true);
+        moveHistoryField.setAccessible(true);
+        redoStackField.setAccessible(true);
+
+        java.util.Stack<model.GameState> testUndoStack = (java.util.Stack<model.GameState>) undoStackField.get(aiController);
+        java.util.List<model.MoveLog> testMoveHistory = (java.util.List<model.MoveLog>) moveHistoryField.get(aiController);
+        java.util.Stack<model.GameState> testRedoStack = (java.util.Stack<model.GameState>) redoStackField.get(aiController);
+
+        // Nạp 2 trạng thái (Người + AI) và 2 dòng log tương ứng vào hệ thống
+        testUndoStack.push(new model.GameState(aiBoard, Color.WHITE, 180, 180));
+        testUndoStack.push(new model.GameState(aiBoard, Color.BLACK, 180, 185));
+        testMoveHistory.add(new model.MoveLog(new Position(1,0), new Position(2,0), null, null, Color.WHITE));
+        testMoveHistory.add(new model.MoveLog(new Position(6,0), new Position(5,0), null, null, Color.BLACK));
+        aiController.setCurrentTurn(Color.WHITE);
+
+        // Act: Thực thi Undo trong trận đấu với AI
+        assertDoesNotThrow(() -> aiController.undo());
+
+        // Assert: Kiểm tra dữ liệu lùi 2 bước cờ đồng thời
+        assertTrue(testUndoStack.isEmpty());
+        assertTrue(testRedoStack.size() >= 2);
+        assertTrue(testMoveHistory.isEmpty());
+        assertEquals(Color.WHITE, aiController.getCurrentTurn());
+    }
+
+    /**
+     * [UC-UNDO - AI Mode - Boundary]
+     * Kiểm tra điều kiện biên chế độ AI: Chặn an toàn nếu kích thước undoStack < 2.
+     */
+    @Test
+    void testUndoWithAIInsufficientStackSize() throws Exception {
+        // Arrange: Nạp duy nhất 1 phần tử vào undoStack ở chế độ chơi với AI
+        Board aiBoard = new Board();
+        GameController aiController = new GameController(aiBoard, null, true);
+        Field undoStackField = GameController.class.getDeclaredField("undoStack");
+        undoStackField.setAccessible(true);
+        java.util.Stack<model.GameState> testUndoStack = (java.util.Stack<model.GameState>) undoStackField.get(aiController);
+        testUndoStack.push(new model.GameState(aiBoard, Color.WHITE, 180, 180));
+
+        // Act & Assert: Thực thi lệnh và kiểm tra cơ chế chặn lỗi thành công
+        assertDoesNotThrow(() -> aiController.undo());
+        assertEquals(1, testUndoStack.size());
+    }
+
+    /**
+     * [UC-REDO - AI Mode]
+     * Kiểm tra Redo trong chế độ AI: Hệ thống phải tiến liền lúc 2 bước cờ từ redoStack.
+     */
+    @Test
+    void testRedoWithAISuccess() throws Exception {
+        // Arrange: Khởi tạo và nạp 2 trạng thái tương lai vào redoStack
+        Board aiBoard = new Board();
+        GameController aiController = new GameController(aiBoard, null, true);
+        Field redoStackField = GameController.class.getDeclaredField("redoStack");
+        redoStackField.setAccessible(true);
+        java.util.Stack<model.GameState> testRedoStack = (java.util.Stack<model.GameState>) redoStackField.get(aiController);
+
+        testRedoStack.push(new model.GameState(aiBoard, Color.BLACK, 185, 185));
+        testRedoStack.push(new model.GameState(aiBoard, Color.WHITE, 180, 180));
+
+        // Act: Thực hiện Redo
+        assertDoesNotThrow(() -> aiController.redo());
+
+        // Assert: Đảm bảo bốc hết cả 2 trạng thái và cập nhật lượt đấu tương lai của AI (BLACK)
+        assertTrue(testRedoStack.isEmpty());
+        assertEquals(Color.BLACK, aiController.getCurrentTurn());
+    }
+
+    /**
+     * [UC-REDO - AI Mode - Boundary]
+     * Kiểm tra điều kiện biên chế độ AI: Từ chối Redo an toàn nếu dữ liệu redoStack < 2.
+     */
+    @Test
+    void testRedoWithAIInsufficientStackSize() throws Exception {
+        // Arrange: Nạp duy nhất 1 phần tử vào redoStack
+        Board aiBoard = new Board();
+        GameController aiController = new GameController(aiBoard, null, true);
+        Field redoStackField = GameController.class.getDeclaredField("redoStack");
+        redoStackField.setAccessible(true);
+        java.util.Stack<model.GameState> testRedoStack = (java.util.Stack<model.GameState>) redoStackField.get(aiController);
+        testRedoStack.push(new model.GameState(aiBoard, Color.WHITE, 180, 180));
+
+        // Act & Assert: Chặn xử lý an toàn, giữ nguyên kích thước stack dữ liệu
+        assertDoesNotThrow(() -> aiController.redo());
+        assertEquals(1, testRedoStack.size());
+    }
+
+    /**
+     * [UC-UNDO - Alternate Flow - A4]
+     * Kiểm tra giới hạn: Ngăn chặn người chơi bấm Undo nhiều hơn 1 lần trong cùng một lượt.
+     */
+    @Test
+    void testUndoLimitOncePerTurn() {
+        // Arrange: Thiết lập môi trường và thực hiện lùi cờ thành công lần đầu tiên
+        gameController.setCurrentTurn(Color.WHITE);
+        gameController.setWhiteTimeLeft(180);
+        try {
+            gameController.handleSquareClick(1, 0);
+            gameController.handleSquareClick(2, 0);
+            gameController.undo();
+        } catch (Exception e) {}
+
+        int whiteTimeAfterFirstUndo = gameController.getWhiteTimeLeft(); // 180s - 10s phạt = 170s
+
+        // Act: Cố tình bấm nút Undo lần thứ 2 ngay tại lượt đó
+        try {
+            gameController.undo();
+        } catch (Exception e) {}
+
+        // Assert: Yêu cầu bị từ chối, giữ nguyên lượt chơi (WHITE) và không bị trừ thêm giây phạt
+        assertEquals(Color.WHITE, gameController.getCurrentTurn());
+        assertEquals(whiteTimeAfterFirstUndo, gameController.getWhiteTimeLeft());
+    }
+
+    /**
+     * [UC-REDO - Basic Flow]
+     * Kiểm tra mở khóa giới hạn: Đảm bảo lệnh Redo khôi phục cờ hiệu `hasUndoedThisTurn` về false.
+     */
+    @Test
+    void testRedoResetsTurnUndoLimit() throws Exception {
+        // Arrange: Thực hiện chuỗi thao tác Di chuyển -> Undo (Lúc này quyền undo bị khóa)
+        try {
+            gameController.handleSquareClick(1, 0);
+            gameController.handleSquareClick(2, 0);
+            gameController.undo();
+        } catch (Exception e) {}
+
+        // Act: Người chơi thực thi lệnh Redo để tiến cờ lên
+        try {
+            gameController.redo();
+        } catch (Exception e) {}
+
+        // Assert: Xác thực trường ẩn hasUndoedThisTurn đã được giải phóng về giá trị false thành công
+        Field hasUndoedField = GameController.class.getDeclaredField("hasUndoedThisTurn");
+        hasUndoedField.setAccessible(true);
+        boolean hasUndoedThisTurnValue = (boolean) hasUndoedField.get(gameController);
+
+        assertFalse(hasUndoedThisTurnValue);
+    }
+    /**
+     * [UC-UNDO - Business Rule]
+     * Kiểm tra reset cờ hiệu qua lượt: Khi người chơi thực hiện một nước đi mới bình thường,
+     * cờ hiệu `hasUndoedThisTurn` bắt buộc phải reset về false cho lượt của người kế tiếp.
+     */
+    @Test
+    void testNormalMoveResetsUndoLimitForNextTurn() throws Exception {
+        // Arrange: Trắng đi quân -> Bấm Undo (Khóa quyền undo lượt này)
+        try {
+            gameController.handleSquareClick(1, 0);
+            gameController.handleSquareClick(2, 0);
+            gameController.undo();
+        } catch (Exception e) {}
+
+        // Act: Trắng thực hiện một nước đi khác hợp lệ (Lượt chuyển sang Black bình thường)
+        try {
+            gameController.handleSquareClick(1, 0);
+            gameController.handleSquareClick(2, 0); // Giả lập đi lại nước khác
+        } catch (Exception e) {}
+
+        // Dùng Reflection kiểm tra biến ẩn hasUndoedThisTurn
+        Field hasUndoedField = GameController.class.getDeclaredField("hasUndoedThisTurn");
+        hasUndoedField.setAccessible(true);
+        boolean hasUndoedThisTurnValue = (boolean) hasUndoedField.get(gameController);
+
+        // Assert: Cờ hiệu phải bằng false để Đen có quyền Undo ở lượt của mình
+        assertFalse(hasUndoedThisTurnValue, "Khi có nước đi mới đổi lượt, cờ hiệu hasUndoedThisTurn phải reset về false!");
     }
 }
