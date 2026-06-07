@@ -8,6 +8,7 @@ public class SaveGameData {
     private Color turn;
     private int secondsElapsed;
     private List<String> moves = new ArrayList<>();
+    private int undoCount;
     public Color getTurn() {
         return turn;
     }
@@ -26,5 +27,12 @@ public class SaveGameData {
 
     public List<String> getMoves() {
         return moves;
+    }
+    public int getUndoCount() {
+        return undoCount;
+    }
+
+    public void setUndoCount(int undoCount) {
+        this.undoCount = undoCount;
     }
 }

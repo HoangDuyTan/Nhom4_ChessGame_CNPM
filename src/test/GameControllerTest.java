@@ -774,4 +774,203 @@ public class GameControllerTest {
         // Assert: Cờ hiệu phải bằng false để Đen có quyền Undo ở lượt của mình
         assertFalse(hasUndoedThisTurnValue, "Khi có nước đi mới đổi lượt, cờ hiệu hasUndoedThisTurn phải reset về false!");
     }
+    /**
+     * [UC-UNDO]
+     * Kiểm tra lịch sử nước đi bị xóa sau khi Undo.
+     */
+    @Test
+    void testUndoRemoveMoveHistory() {
+        gameController.handleSquareClick(1, 0);
+        gameController.handleSquareClick(2, 0);
+        assertEquals(1, gameController.getMoveHistory().size());
+        gameController.undo();
+        assertEquals(0, gameController.getMoveHistory().size());
+    }
+    /**
+     * Kiểm tra quân cờ trở về vị trí ban đầu sau Undo.
+     */
+    @Test
+    void testUndoRestoreBoardState() {
+        gameController.handleSquareClick(1, 0);
+        gameController.handleSquareClick(2, 0);
+        assertNull(board.get(new Position(1, 0)));
+        gameController.undo();
+        assertNotNull(board.get(new Position(1, 0)));
+        assertNull(board.get(new Position(2, 0)));
+    }
+    /**
+     * Kiểm tra undoCount tăng sau khi Undo.
+     */
+    @Test
+    void testUndoIncreaseUndoCount() {
+        gameController.handleSquareClick(1, 0);
+        gameController.handleSquareClick(2, 0);
+        assertEquals(0, gameController.getUndoCount());
+        gameController.undo();
+        assertEquals(1, gameController.getUndoCount());
+    }
+    /**
+     * Kiểm tra undoCount được reset khi có nước đi mới.
+     */
+    @Test
+    void testNewMoveResetUndoCount() {
+        gameController.handleSquareClick(1, 0);
+        gameController.handleSquareClick(2, 0);
+        gameController.undo();
+        assertEquals(1, gameController.getUndoCount());
+        gameController.handleSquareClick(1, 1);
+        gameController.handleSquareClick(2, 1);
+        assertEquals(0, gameController.getUndoCount());
+    }
+    /**
+     * Kiểm tra Undo khi lịch sử nước đi rỗng.
+     */
+    @Test
+    void testUndoWithEmptyMoveHistory() {
+        gameController.clearHistory();
+        assertDoesNotThrow(() -> gameController.undo());
+    }
+    /**
+     * Kiểm tra quân cờ quay lại vị trí ban đầu sau Undo.
+     */
+    @Test
+    void testUndoRestorePiecePosition() {
+        gameController.handleSquareClick(1, 0);
+        gameController.handleSquareClick(2, 0);
+        gameController.undo();
+        assertNotNull(board.get(new Position(1, 0)));
+        assertNull(board.get(new Position(2, 0)));
+    }
+    /**
+     * Kiểm tra lượt chơi được khôi phục sau Undo.
+     */
+    @Test
+    void testUndoRestoreTurn() {
+        gameController.setCurrentTurn(Color.WHITE);
+        gameController.handleSquareClick(1, 0);
+        gameController.handleSquareClick(2, 0);
+        assertEquals(Color.BLACK, gameController.getCurrentTurn());
+        gameController.undo();
+        assertEquals(Color.WHITE, gameController.getCurrentTurn());
+    }
+    /**
+     * Không thể quay lại ván cũ sau Restart.
+     */
+    @Test
+    void testUndoAfterRestart() {
+        gameController.handleSquareClick(1, 0);
+        gameController.handleSquareClick(2, 0);
+        gameController.restartGame();
+        assertDoesNotThrow(() -> gameController.undo());
+        assertEquals(Color.WHITE, gameController.getCurrentTurn());
+    }
+    /**
+     * Undo khi chưa có nước đi.
+     */
+    @Test
+    void testUndoWithoutAnyMove() {
+        Color turnBefore = gameController.getCurrentTurn();
+        gameController.undo();
+        assertEquals(turnBefore, gameController.getCurrentTurn());
+    }
+    /**
+     * Undo liên tục khi không còn nước đi.
+     */
+    @Test
+    void testMultipleUndoOnEmptyStack() {
+
+        assertDoesNotThrow(() -> {
+            gameController.undo();
+            gameController.undo();
+            gameController.undo();
+        });
+    }
+    /**
+     * Mục tiêu:
+     * Đảm bảo trạng thái bàn cờ được khôi phục chính xác
+     * sau khi thực hiện Redo.
+     */
+    @Test
+    void testRedoRestorePiecePosition() {
+        gameController.handleSquareClick(1,0);
+        gameController.handleSquareClick(2,0);
+        gameController.undo();
+        gameController.redo();
+        assertNull(board.get(new Position(1,0)));
+        assertNotNull(board.get(new Position(2,0)));
+    }
+    /**
+     * Mục tiêu:
+     * Đảm bảo lịch sử nước đi được khôi phục
+     * sau khi thực hiện Redo.
+     */
+    @Test
+    void testRedoRestoreMoveHistory() {
+        gameController.handleSquareClick(1,0);
+        gameController.handleSquareClick(2,0);
+        int historyBeforeUndo = gameController.getMoveHistory().size();
+        gameController.undo();
+        gameController.redo();
+        assertEquals(historyBeforeUndo, gameController.getMoveHistory().size());
+    }
+    /**
+     * Mục tiêu:
+     * Kiểm tra hệ thống không gây lỗi
+     * khi người chơi bấm Redo nhưng redoStack rỗng.
+     */
+    @Test
+    void testRedoEmptyStack() {
+        assertDoesNotThrow(() -> gameController.redo());
+        assertEquals(Color.WHITE, gameController.getCurrentTurn());
+    }
+    /**
+     * Mục tiêu:
+     * Đảm bảo redoStack bị xóa hoàn toàn
+     * khi người chơi thực hiện một nước đi mới
+     * sau thao tác Undo.
+     */
+    @Test
+    void testRedoClearedAfterNewMove() {
+        gameController.handleSquareClick(1,0);
+        gameController.handleSquareClick(2,0);
+        gameController.undo();
+        gameController.handleSquareClick(1,1);
+        gameController.handleSquareClick(2,1);
+        Color current = gameController.getCurrentTurn();
+        gameController.redo();
+        assertEquals(current, gameController.getCurrentTurn()
+        );
+    }
+    /**
+     * Mục tiêu:
+     * Đảm bảo toàn bộ dữ liệu Redo bị xóa
+     * khi bắt đầu một ván đấu mới.
+     */
+    @Test
+    void testRedoAfterRestartDoesNothing() {
+        gameController.handleSquareClick(1,0);
+        gameController.handleSquareClick(2,0);
+        gameController.undo();
+        gameController.restartGame();
+        assertDoesNotThrow(() -> gameController.redo());
+        assertEquals(Color.WHITE, gameController.getCurrentTurn());
+    }
+    /**
+     * Mục tiêu:
+     * Kiểm tra hệ thống hỗ trợ thực hiện
+     * nhiều lần Redo liên tiếp khi còn dữ liệu.
+     */
+    @Test
+    void testMultipleRedo() {
+        gameController.handleSquareClick(1,0);
+        gameController.handleSquareClick(2,0);
+        gameController.handleSquareClick(6,0);
+        gameController.handleSquareClick(5,0);
+        gameController.undo();
+        gameController.undo();
+        gameController.redo();
+        gameController.redo();
+        assertEquals(Color.WHITE, gameController.getCurrentTurn()
+        );
+    }
 }

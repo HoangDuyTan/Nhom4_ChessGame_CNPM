@@ -23,7 +23,7 @@ public class SaveLoadControllerTest {
         // Danh sách lịch sử nước đi mẫu
         List<MoveLog> moves = new ArrayList<>();
         // Thực hiện chức năng Auto Save
-        SaveLoadController.autoSave(Color.BLACK, 100, moves, true);
+        SaveLoadController.autoSave(Color.BLACK, 100, 0,moves, true);
         // Kiểm tra file save của chế độ AI đã được tạo
         assertTrue(SaveManager.hasSaveFile(true));
     }

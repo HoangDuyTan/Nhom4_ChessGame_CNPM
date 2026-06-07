@@ -27,6 +27,7 @@ public class GameController {
     private boolean gameEnded = false;
     private Stack<GameState> undoStack = new Stack<>();
     private Stack<GameState> redoStack = new Stack<>();
+    private Stack<MoveLog> redoMoveHistory = new Stack<>();
     private boolean hasUndoedThisTurn = false;
     private int whiteUndoLeft = 3;
     private int blackUndoLeft = 3;
@@ -34,6 +35,7 @@ public class GameController {
     private final Color aiColor = Color.BLACK;
     private boolean aiThinking = false;
     private final Random random = new Random();
+    private int undoCount = 0;
 
     public GameController(Board board, GameWindow view) {
         this(board, view, false);
@@ -116,10 +118,10 @@ public class GameController {
             MoveLog log = new MoveLog(selectedPosition, destination, movingPiece, targetPiece, currentTurn);
             moveHistory.add(log);
             System.out.println("[LỊCH SỬ NƯỚC ĐI] " + log.getStandardNotation());
-
             undoStack.push(stateBefore);
             redoStack.clear();
-
+            redoMoveHistory.clear();
+            undoCount = 0;
             // AN TOÀN CHO TEST: Chỉ update giao diện nếu view khác null
             if (view != null) {
                 view.updateBoardGUI();
@@ -147,7 +149,7 @@ public class GameController {
             /* * [TRIGGER AUTO-SAVE]: Kích hoạt UC-04.1 (Tự động lưu ván đấu)
              * Chức năng: Đảm bảo tính bền vững dữ liệu ngay sau khi một nước đi hợp lệ được thực hiện xong.
              */
-            SaveLoadController.autoSave(currentTurn, secondsElapsed, moveHistory, playWithAI);
+            SaveLoadController.autoSave(currentTurn, secondsElapsed,undoCount, moveHistory, playWithAI);
             selectedPosition = null;
             triggerAIMoveIfNeeded();
         } else {
@@ -182,7 +184,7 @@ public class GameController {
 
             undoStack.push(stateBefore);
             redoStack.clear();
-
+            undoCount = 0;
             if (view != null) {
                 view.updateBoardGUI();
             }
@@ -214,7 +216,7 @@ public class GameController {
                 view.resetBoardColors();
             }
 
-            SaveLoadController.autoSave(currentTurn, secondsElapsed, moveHistory, playWithAI);
+            SaveLoadController.autoSave(currentTurn, secondsElapsed, undoCount,moveHistory, playWithAI);
             selectedPosition = null;
             triggerAIMoveIfNeeded();
         } else if (showInvalidMessage && view != null) {
@@ -661,6 +663,13 @@ public class GameController {
          * [SR3 của UC-05]: Vô hiệu hóa tính năng Hoàn tác trong lúc Tạm dừng.
          * Ngăn chặn người chơi thay đổi trạng thái bàn cờ khi đồng hồ đã đóng băng.
          */
+        /*
+         * Giới hạn số lần Hoàn tác tối đa 1 lần mỗi lượt đi.
+         */
+        if (undoCount >= 1) {
+            JOptionPane.showMessageDialog(view, "Bạn đã sử dụng Undo ở lượt hiện tại!", "Thông báo", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
 
         // [UC-UNDO - Basic Flow - Bước 2] & [UC-UNDO - Alternate Flow - A1]
         // Kiểm tra điều kiện tiên quyết của ván đấu (Kết thúc, Tạm dừng, AI đang nghĩ, Stack rỗng)
@@ -713,15 +722,17 @@ public class GameController {
             GameState aiState = undoStack.pop();
             redoStack.push(aiState);
             previousState = undoStack.pop();
-            if (moveHistory.size() >= 2) {
-                moveHistory.remove(moveHistory.size() - 1);
-                moveHistory.remove(moveHistory.size() - 1);
+            if (!moveHistory.isEmpty()) {
+                redoMoveHistory.push(moveHistory.remove(moveHistory.size() - 1));
+            }
+            if (!moveHistory.isEmpty()) {
+                redoMoveHistory.push(moveHistory.remove(moveHistory.size() - 1));
             }
         } else {
             // Chế độ PvP: Trích xuất 1 trạng thái gần nhất từ undoStack và xóa bản ghi văn bản cuối trong moveHistory
             previousState = undoStack.pop();
             if (!moveHistory.isEmpty()) {
-                moveHistory.remove(moveHistory.size() - 1);
+                redoMoveHistory.push(moveHistory.remove(moveHistory.size() - 1));
             }
         }
 
@@ -754,7 +765,7 @@ public class GameController {
 
         // [UC-UNDO - Basic Flow - Bước 12] Thiết lập cờ hiệu khóa chức năng Undo kế tiếp trong lượt này
         this.hasUndoedThisTurn = true;
-
+        undoCount++;
         // [UC-UNDO - Basic Flow - Bước 13] Thực hiện đóng gói bit dữ liệu thời gian mới
         this.secondsElapsed = (this.whiteTimeLeft << 16) | (this.blackTimeLeft & 0xFFFF);
 
@@ -768,7 +779,7 @@ public class GameController {
         checkGameState();
 
         // [UC-UNDO - Basic Flow - Bước 15] Kích hoạt hàm tự động lưu dữ liệu ván đấu. Kết thúc Use Case.
-        SaveLoadController.autoSave(currentTurn, secondsElapsed, moveHistory, playWithAI);
+        SaveLoadController.autoSave(currentTurn, secondsElapsed, undoCount,moveHistory, playWithAI);
     }
 
     public void redo() {
@@ -802,9 +813,18 @@ public class GameController {
             GameState playerState = redoStack.pop();
             undoStack.push(playerState);
             nextState = redoStack.pop();
+            if (!redoMoveHistory.isEmpty()) {
+                moveHistory.add(redoMoveHistory.pop());
+            }
+            if (!redoMoveHistory.isEmpty()) {
+                moveHistory.add(redoMoveHistory.pop());
+            }
         } else {
             // Chế độ PvP: Lấy ra 1 trạng thái nước đi tiếp theo trực tiếp từ trong redoStack
             nextState = redoStack.pop();
+            if (!redoMoveHistory.isEmpty()) {
+                moveHistory.add(redoMoveHistory.pop());
+            }
         }
 
         // [UC-REDO - Basic Flow - Bước 6] Gọi hàm khôi phục dữ liệu restore(board) từ trạng thái nextState
@@ -833,7 +853,7 @@ public class GameController {
         checkGameState();
 
         // [UC-REDO - Basic Flow - Bước 12] Gọi hàm tự động lưu dữ liệu ván đấu. Kết thúc Use Case.
-        SaveLoadController.autoSave(currentTurn, secondsElapsed, moveHistory, playWithAI);
+        SaveLoadController.autoSave(currentTurn, secondsElapsed,undoCount, moveHistory, playWithAI);
     }
 
     public void replayMoveForLoad(Position from, Position to) {
@@ -846,6 +866,7 @@ public class GameController {
     public void clearHistory() {
         undoStack.clear();
         redoStack.clear();
+        redoMoveHistory.clear();
         moveHistory.clear();
     }
 
@@ -869,6 +890,8 @@ public class GameController {
 
         undoStack.clear();
         redoStack.clear();
+        redoMoveHistory.clear();
+        moveHistory.clear();
         if (view != null) {
             view.resetBoardColors();
             view.updateBoardGUI();
@@ -904,5 +927,12 @@ public class GameController {
             view.dispose(); // Đóng cửa sổ
             new StartWindow(); // Trở về menu chính
         }
+    }
+    public int getUndoCount() {
+        return undoCount;
+    }
+
+    public void setUndoCount(int undoCount) {
+        this.undoCount = undoCount;
     }
 }
