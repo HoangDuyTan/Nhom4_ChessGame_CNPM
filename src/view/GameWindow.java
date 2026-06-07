@@ -51,7 +51,7 @@ public class GameWindow extends JFrame {
     public GameWindow(boolean playWithAI) {
         this.board = new Board();
         this.controller = new GameController(this.board, this, playWithAI);
-        SoundManager.setSoundEnabled( SoundConfig.load());
+        SoundManager.setSoundEnabled(SoundConfig.load());
         setTitle("CỜ VUA");
         setSize(1000, 700);
         setMinimumSize(new Dimension(850, 650));
@@ -129,8 +129,10 @@ public class GameWindow extends JFrame {
         pauseOverlay.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         pauseOverlay.add(pauseLabel);
 
-        pauseOverlay.addMouseListener(new MouseAdapter() {});
-        pauseOverlay.addMouseMotionListener(new MouseMotionAdapter() {});
+        pauseOverlay.addMouseListener(new MouseAdapter() {
+        });
+        pauseOverlay.addMouseMotionListener(new MouseMotionAdapter() {
+        });
         pauseOverlay.setVisible(false);
         pauseLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         layeredPane.add(pauseOverlay, JLayeredPane.PALETTE_LAYER);
@@ -210,7 +212,7 @@ public class GameWindow extends JFrame {
             rightPanel.add(Box.createVerticalStrut(15));
         }
 
-        // --- BẮT ĐẦU: GIAO DIỆN ĐỒNG HỒ ĐÔI ---
+        // --- BẮT ĐẦU: GIAO DIỆN ĐỒNG HỒ ĐÔI (cải tiến phục vụ cho UC-05.1/UC-05.2:Paususe/Resume Game) ---
         if (!playWithAI) {
             JPanel blackTimerPanel = new JPanel();
             blackTimerPanel.setBackground(CONTROL_PANEL_BG);
@@ -373,6 +375,7 @@ public class GameWindow extends JFrame {
         updateBoardGUI();
     }
 
+    // Hàm phụ trợ cập nhật giao diện đồng hồ phụ trợ UC-05.1/UC-05.2: Pause/Resume Game
     public void updateTimer(int whiteSeconds, int blackSeconds, Color currentTurn) {
         if (whiteTimerLabel == null || blackTimerLabel == null) {
             return;
@@ -425,6 +428,7 @@ public class GameWindow extends JFrame {
     public GameController getController() {
         return controller;
     }
+
     public void refreshTheme() {
 
         DARK_SQUARE_COLOR = Theme.DARK_SQUARE_COLOR;
@@ -435,7 +439,7 @@ public class GameWindow extends JFrame {
 
         resetBoardColors();
 
-        boardPanel.setBorder( BorderFactory.createLineBorder(BORDER_COLOR, 3) );
+        boardPanel.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 3));
 
         rightPanel.setBackground(CONTROL_PANEL_BG);
         rowLabels.setBackground(CONTROL_PANEL_BG);

@@ -77,8 +77,10 @@ public class SaveManager {
     }
 
     /**
-     * Chức năng: Xóa tệp dữ liệu lưu ván đấu.
-     * Ánh xạ (SR3 của UC-07): Được gọi khi có người chơi đầu hàng để xóa trạng thái lưu cũ.
+     * [SR3 của UC-07]: Tính toàn vẹn dữ liệu
+     * Chức năng: Xóa tệp dữ liệu lưu ván đấu (savegame.txt hoặc savegame_ai.txt).
+     * Được kích hoạt khi có người chơi Đầu hàng hoặc ván đấu kết thúc
+     * để đảm bảo không thể khôi phục lại trận đấu đã hạ màn.
      */
     public static void deleteSaveFile(boolean playWithAI) {
         String saveFile = playWithAI ? SAVE_FILE_AI : SAVE_FILE;
