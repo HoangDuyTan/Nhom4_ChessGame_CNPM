@@ -664,4 +664,136 @@ public class GameControllerTest {
                 "Chế độ chơi với máy không được tạo đồng hồ đếm giờ!"
         );
     }
+
+
+    /**
+     * [UC-UNDO - AI Mode][Test]
+     * Kiểm tra Undo thành công khi chơi với AI: Hệ thống phải bốc đồng thời 2 trạng thái
+     * (Nước của AI và nước của Người) khỏi undoStack, đồng thời xóa 2 bản ghi lịch sử.
+     */
+    @Test
+    void testUndoWithAISuccess() throws Exception {
+        // Khởi tạo một Controller riêng biệt chạy chế độ AI (playWithAI = true)
+        Board aiBoard = new Board();
+        GameController aiController = new GameController(aiBoard, null, true);
+
+        // Truy xuất các thuộc tính private qua Reflection để nạp dữ liệu giả lập
+        Field undoStackField = GameController.class.getDeclaredField("undoStack");
+        undoStackField.setAccessible(true);
+        java.util.Stack<model.GameState> testUndoStack = (java.util.Stack<model.GameState>) undoStackField.get(aiController);
+
+        Field moveHistoryField = GameController.class.getDeclaredField("moveHistory");
+        moveHistoryField.setAccessible(true);
+        java.util.List<model.MoveLog> testMoveHistory = (java.util.List<model.MoveLog>) moveHistoryField.get(aiController);
+
+        Field redoStackField = GameController.class.getDeclaredField("redoStack");
+        redoStackField.setAccessible(true);
+        java.util.Stack<model.GameState> testRedoStack = (java.util.Stack<model.GameState>) redoStackField.get(aiController);
+
+        // Tạo 2 trạng thái giả lập đại diện cho nước đi của Người (Player) và Máy (AI)
+        model.GameState playerState = new model.GameState(aiBoard, Color.WHITE, 180, 180);
+        model.GameState aiState = new model.GameState(aiBoard, Color.BLACK, 180, 185);
+
+        // Đẩy vào stack theo đúng thứ tự vận hành: nước của Người nằm dưới, nước của AI nằm trên cùng
+        testUndoStack.push(playerState);
+        testUndoStack.push(aiState);
+
+        // Giả lập danh sách lịch sử text đã ghi nhận 2 nước đi này
+        testMoveHistory.add(new model.MoveLog(new Position(1,0), new Position(2,0), null, null, Color.WHITE));
+        testMoveHistory.add(new model.MoveLog(new Position(6,0), new Position(5,0), null, null, Color.BLACK));
+
+        // Thiết lập lượt hiện tại của game đang ở tương lai (sau khi AI đi xong thì quay về lượt WHITE)
+        aiController.setCurrentTurn(Color.WHITE);
+        aiController.setWhiteTimeLeft(180);
+
+        // Kích hoạt lệnh hoàn tác
+        assertDoesNotThrow(() -> aiController.undo(), "Hàm undo() với AI bị văng lỗi!");
+
+        // XÁC MINH 1: undoStack phải giải phóng hoàn toàn cả 2 phần tử
+        assertTrue(testUndoStack.isEmpty(), "Chế độ AI phải lùi liền lúc 2 bước cờ khỏi undoStack!");
+
+        // XÁC MINH 2: Đảm bảo các trạng thái cờ hoàn tác đã được bốc thành công sang redoStack
+        assertTrue(testRedoStack.size() >= 2, "redoStack không nhận đủ các trạng thái cờ hoàn tác từ đối thủ!");
+
+        // XÁC MINH 3: moveHistory phải được dọn dẹp sạch sẽ cả 2 dòng ghi chú nước đi
+        assertTrue(testMoveHistory.isEmpty(), "Màn hình lịch sử nước đi không xóa bỏ 2 nước cờ của Người và AI sau khi Undo!");
+
+        // XÁC MINH 4: Lượt chơi phải được trả về chuẩn xác cho phe TRẮNG (Người chơi)
+        assertEquals(Color.WHITE, aiController.getCurrentTurn(), "Lượt chơi không trả về đúng cho Người chơi sau khi Undo với AI!");
+    }
+    /**
+     * [UC-UNDO - AI Mode][Test Trạng Thái Biên]
+     * Kiểm tra tính an toàn khi Undo với AI: Nếu số lượng phần tử trong undoStack < 2,
+     * hệ thống phải lập tức từ chối và hủy bỏ thao tác để ngăn chặn crash lỗi rỗng Stack.
+     */
+    @Test
+    void testUndoWithAIInsufficientStackSize() throws Exception {
+        Board aiBoard = new Board();
+        GameController aiController = new GameController(aiBoard, null, true);
+
+        Field undoStackField = GameController.class.getDeclaredField("undoStack");
+        undoStackField.setAccessible(true);
+        java.util.Stack<model.GameState> testUndoStack = (java.util.Stack<model.GameState>) undoStackField.get(aiController);
+
+        // Tình huống: Mới chỉ có 1 phần tử duy nhất trong stack
+        testUndoStack.push(new model.GameState(aiBoard, Color.WHITE, 180, 180));
+
+        // Thực thi lệnh và đảm bảo Guard Clause hoạt động chặn đứng lỗi văng ra
+        assertDoesNotThrow(() -> aiController.undo(), "Hệ thống bị crash lỗi EmptyStackException do không check size < 2!");
+        assertEquals(1, testUndoStack.size(), "Stack dữ liệu bị sai lệch sau khi lệnh Undo bị từ chối!");
+    }
+
+    /**
+     * [UC-REDO - AI Mode][Test]
+     * Kiểm tra Redo thành công khi chơi với AI: Hệ thống phải tiến liền 2 bước cờ
+     * từ redoStack ngược trở lại bàn đấu để khớp với tiến trình phản hồi của AI.
+     */
+    @Test
+    void testRedoWithAISuccess() throws Exception {
+        Board aiBoard = new Board();
+        GameController aiController = new GameController(aiBoard, null, true);
+
+        Field redoStackField = GameController.class.getDeclaredField("redoStack");
+        redoStackField.setAccessible(true);
+        java.util.Stack<model.GameState> testRedoStack = (java.util.Stack<model.GameState>) redoStackField.get(aiController);
+
+        // Tạo trạng thái giả lập (Nước của Người và nước phản hồi của AI)
+        model.GameState playerState = new model.GameState(aiBoard, Color.WHITE, 180, 180);
+        model.GameState aiState = new model.GameState(aiBoard, Color.BLACK, 185, 185);
+
+        // Đẩy vào redoStack theo thứ tự sẵn sàng tiến lên: Nước của Người đi trước (trên), nước AI đi sau (dưới)
+        testRedoStack.push(aiState);
+        testRedoStack.push(playerState);
+
+        // Bấm nút Redo (Làm lại)
+        assertDoesNotThrow(() -> aiController.redo(), "Hàm redo() với AI bị văng lỗi!");
+
+        // XÁC MINH: redoStack phải trống rỗng vì đã bốc cả 2 nước cờ tiến lên phía trước
+        assertTrue(testRedoStack.isEmpty(), "Chế độ AI phải giải phóng liền lúc 2 bước cờ khỏi redoStack!");
+
+        // Trạng thái lượt chơi cuối cùng phải đồng bộ khớp với lượt của AI (BLACK)
+        assertEquals(Color.BLACK, aiController.getCurrentTurn(), "Redo trong chế độ AI không đưa lượt đấu tiến về đúng trạng thái tương lai!");
+    }
+
+    /**
+     * [UC-REDO - AI Mode][Test Trạng Thái Biên]
+     * Kiểm tra tính an toàn khi Redo với AI: Nếu redoStack < 2 phần tử,
+     * hệ thống phải hủy lệnh an toàn mà không làm mất mát dữ liệu hiện tại.
+     */
+    @Test
+    void testRedoWithAIInsufficientStackSize() throws Exception {
+        Board aiBoard = new Board();
+        GameController aiController = new GameController(aiBoard, null, true);
+
+        Field redoStackField = GameController.class.getDeclaredField("redoStack");
+        redoStackField.setAccessible(true);
+        java.util.Stack<model.GameState> testRedoStack = (java.util.Stack<model.GameState>) redoStackField.get(aiController);
+
+        // Chỉ có 1 phần tử đơn lẻ trong Redo
+        testRedoStack.push(new model.GameState(aiBoard, Color.WHITE, 180, 180));
+
+        // Thực thi lệnh và đảm bảo chặn lỗi thành công
+        assertDoesNotThrow(() -> aiController.redo(), "Hệ thống bị sập lỗi khi gọi Redo với AI lúc dữ liệu RedoStack thiếu hụt!");
+        assertEquals(1, testRedoStack.size(), "Dữ liệu trong redoStack bị thay đổi bất thường!");
+    }
 }
